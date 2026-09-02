@@ -146,31 +146,31 @@ class ArrService extends EventEmitter {
     return {
       prowlarr: {
         displayName: 'Prowlarr',
-        exe: path.join(MEDIA_STACK_DIR, 'Prowlarr', 'Prowlarr.Console.exe'),
+        exe: path.join(MEDIA_STACK_DIR, 'Prowlarr', 'Prowlarr.exe'),
         args: ['--data=C:\\ProgramData\\Prowlarr', '--nobrowser'],
         cwd: path.join(MEDIA_STACK_DIR, 'Prowlarr'),
-        imageNames: ['Prowlarr.Console.exe', 'Prowlarr.exe'],
+        imageNames: ['Prowlarr.exe', 'Prowlarr.Console.exe'],
       },
       radarr: {
         displayName: 'Radarr',
-        exe: path.join(MEDIA_STACK_DIR, 'Radarr', 'Radarr.Console.exe'),
+        exe: path.join(MEDIA_STACK_DIR, 'Radarr', 'Radarr.exe'),
         args: ['--data=C:\\ProgramData\\Radarr', '--nobrowser'],
         cwd: path.join(MEDIA_STACK_DIR, 'Radarr'),
-        imageNames: ['Radarr.Console.exe', 'Radarr.exe'],
+        imageNames: ['Radarr.exe', 'Radarr.Console.exe'],
       },
       sonarr: {
         displayName: 'Sonarr',
-        exe: path.join(MEDIA_STACK_DIR, 'Sonarr', 'Sonarr.Console.exe'),
+        exe: path.join(MEDIA_STACK_DIR, 'Sonarr', 'Sonarr.exe'),
         args: ['--data=C:\\ProgramData\\Sonarr', '--nobrowser'],
         cwd: path.join(MEDIA_STACK_DIR, 'Sonarr'),
-        imageNames: ['Sonarr.Console.exe', 'Sonarr.exe'],
+        imageNames: ['Sonarr.exe', 'Sonarr.Console.exe'],
       },
       lidarr: {
         displayName: 'Lidarr',
-        exe: path.join(MEDIA_STACK_DIR, 'Lidarr', 'Lidarr.Console.exe'),
+        exe: path.join(MEDIA_STACK_DIR, 'Lidarr', 'Lidarr.exe'),
         args: ['--data=C:\\ProgramData\\Lidarr', '--nobrowser'],
         cwd: path.join(MEDIA_STACK_DIR, 'Lidarr'),
-        imageNames: ['Lidarr.Console.exe', 'Lidarr.exe'],
+        imageNames: ['Lidarr.exe', 'Lidarr.Console.exe'],
       },
       sabnzbd: {
         displayName: 'SABnzbd',
@@ -207,6 +207,7 @@ class ArrService extends EventEmitter {
       const child = spawn(def.exe, def.args, {
         detached: true,
         stdio: 'ignore',
+        windowsHide: true,
         cwd: def.cwd,
       });
       child.unref();

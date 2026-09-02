@@ -27,11 +27,11 @@ try {
 } catch {}
 
 const MEDIA_STACK_CONFIG = {
-  sonarr: { name: 'Sonarr', url: 'http://127.0.0.1:8989/api/v3/system/status', port: 8989, exe: path.join(os.homedir(), 'MediaStack', 'Sonarr', 'Sonarr.Console.exe'), args: ['--data=C:\\ProgramData\\Sonarr', '--nobrowser'] },
-  radarr: { name: 'Radarr', url: 'http://127.0.0.1:7878/api/v3/system/status', port: 7878, exe: path.join(os.homedir(), 'MediaStack', 'Radarr', 'Radarr.Console.exe'), args: ['--data=C:\\ProgramData\\Radarr', '--nobrowser'] },
-  lidarr: { name: 'Lidarr', url: 'http://127.0.0.1:8686/api/v1/system/status', port: 8686, exe: path.join(os.homedir(), 'MediaStack', 'Lidarr', 'Lidarr.Console.exe'), args: ['--data=C:\\ProgramData\\Lidarr', '--nobrowser'] },
+  sonarr: { name: 'Sonarr', url: 'http://127.0.0.1:8989/api/v3/system/status', port: 8989, exe: path.join(os.homedir(), 'MediaStack', 'Sonarr', 'Sonarr.exe'), args: ['--data=C:\\ProgramData\\Sonarr', '--nobrowser'] },
+  radarr: { name: 'Radarr', url: 'http://127.0.0.1:7878/api/v3/system/status', port: 7878, exe: path.join(os.homedir(), 'MediaStack', 'Radarr', 'Radarr.exe'), args: ['--data=C:\\ProgramData\\Radarr', '--nobrowser'] },
+  lidarr: { name: 'Lidarr', url: 'http://127.0.0.1:8686/api/v1/system/status', port: 8686, exe: path.join(os.homedir(), 'MediaStack', 'Lidarr', 'Lidarr.exe'), args: ['--data=C:\\ProgramData\\Lidarr', '--nobrowser'] },
   retroarr: { name: 'RetroArr', url: 'http://127.0.0.1:5002/api/v3/system/status', port: 5002, exe: path.join(os.homedir(), 'MediaStack', 'RetroArr', 'RetroArr.Host.exe'), args: [] },
-  prowlarr: { name: 'Prowlarr', url: 'http://127.0.0.1:9696/api/v1/system/status', port: 9696, exe: path.join(os.homedir(), 'MediaStack', 'Prowlarr', 'Prowlarr.Console.exe'), args: ['--data=C:\\ProgramData\\Prowlarr', '--nobrowser'] },
+  prowlarr: { name: 'Prowlarr', url: 'http://127.0.0.1:9696/api/v1/system/status', port: 9696, exe: path.join(os.homedir(), 'MediaStack', 'Prowlarr', 'Prowlarr.exe'), args: ['--data=C:\\ProgramData\\Prowlarr', '--nobrowser'] },
   sabnzbd: { name: 'SABnzbd', url: 'http://127.0.0.1:8080/api?mode=version', port: 8080, exe: 'C:\\Program Files\\SABnzbd\\SABnzbd.exe', args: ['-b', '0'] }
 };
 
@@ -329,34 +329,46 @@ class MinervaEngine {
       };
     }
 
+    // Never spawn external processes during unit tests
+    if (process.env.NODE_ENV === 'test') {
+      return {
+        timestamp: new Date().toISOString(),
+        offlineDetected: offlineServices,
+        healed: offlineServices,
+        actionsTaken: [`[TEST_DRY_RUN] Simulated restart for ${offlineServices.join(', ')}`]
+      };
+    }
+
     const actionsTaken = [];
     const { spawn } = require('child_process');
 
-    // If multiple services are offline, invoke launch_stack.bat for coordinated restoration
-    const launchScript = path.join(os.homedir(), 'MediaStack', 'launch_stack.bat');
-    if (offlineServices.length >= 2 && fs.existsSync(launchScript)) {
+    // Restart ONLY the specific offline services silently in background without popping up console windows
+    for (const srvKey of offlineServices) {
       try {
-        const p = spawn('cmd.exe', ['/c', launchScript], { detached: true, stdio: 'ignore' });
-        p.unref();
-        actionsTaken.push(`Launched full MediaStack script (${launchScript}) for services: ${offlineServices.join(', ')}`);
-      } catch (err) {
-        actionsTaken.push(`Failed to run launch_stack.bat: ${err.message}`);
-      }
-    } else {
-      // Restart individual service executables
-      for (const srvKey of offlineServices) {
-        const cfg = MEDIA_STACK_CONFIG[srvKey];
-        if (cfg && fs.existsSync(cfg.exe)) {
-          try {
-            const p = spawn(cfg.exe, cfg.args, { detached: true, stdio: 'ignore' });
-            p.unref();
-            actionsTaken.push(`Spawned ${cfg.name} via ${cfg.exe}`);
-          } catch (err) {
-            actionsTaken.push(`Failed to spawn ${cfg.name}: ${err.message}`);
-          }
-        } else if (cfg) {
-          actionsTaken.push(`Cannot restart ${cfg.name}: executable not found at ${cfg.exe}`);
+        const { arrService } = require('./arrService.cjs');
+        if (arrService && typeof arrService.startService === 'function') {
+          const res = await arrService.startService(srvKey);
+          actionsTaken.push(res.message || `Started ${srvKey}`);
+          continue;
         }
+      } catch {}
+
+      const cfg = MEDIA_STACK_CONFIG[srvKey];
+      if (cfg && fs.existsSync(cfg.exe)) {
+        try {
+          const p = spawn(cfg.exe, cfg.args, {
+            detached: true,
+            stdio: 'ignore',
+            windowsHide: true,
+            cwd: path.dirname(cfg.exe)
+          });
+          p.unref();
+          actionsTaken.push(`Spawned ${cfg.name} silently via ${cfg.exe}`);
+        } catch (err) {
+          actionsTaken.push(`Failed to spawn ${cfg.name}: ${err.message}`);
+        }
+      } else if (cfg) {
+        actionsTaken.push(`Cannot restart ${cfg.name}: executable not found at ${cfg.exe}`);
       }
     }
 
