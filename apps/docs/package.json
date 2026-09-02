@@ -1,0 +1,16 @@
+{
+  "name": "aloy-docs",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev --port 4321",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.32.5",
+    "astro": "^5.4.2",
+    "sharp": "^0.33.5"
+  }
+}

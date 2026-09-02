@@ -1,0 +1,87 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <application
+      android:name=".MainApplication"
+      android:label="@string/app_name"
+      android:icon="@mipmap/ic_launcher"
+      android:roundIcon="@mipmap/ic_launcher_round"
+      android:allowBackup="false"
+      android:theme="@style/AppTheme"
+      android:usesCleartextTraffic="true"
+      android:supportsRtl="true">
+      <activity
+        android:name=".MainActivity"
+        android:label="@string/app_name"
+        android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+        android:launchMode="singleTask"
+        android:windowSoftInputMode="adjustResize"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="aloy" />
+        </intent-filter>
+      </activity>
+
+      <!-- Aloy Focus 4x1 Quick Bar Widget -->
+      <receiver
+          android:name=".AloyFocusWidgetProvider"
+          android:exported="true"
+          android:label="Aloy Focus Bar">
+          <intent-filter>
+              <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+          </intent-filter>
+          <meta-data
+              android:name="android.appwidget.provider"
+              android:resource="@xml/aloy_focus_widget_info" />
+      </receiver>
+
+      <!-- Aloy Bento 4x2 Hub Widget -->
+      <receiver
+          android:name=".AloyBentoWidgetProvider"
+          android:exported="true"
+          android:label="Aloy Focus Bento">
+          <intent-filter>
+              <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+          </intent-filter>
+          <meta-data
+              android:name="android.appwidget.provider"
+              android:resource="@xml/aloy_bento_widget_info" />
+      </receiver>
+
+      <!-- Aloy Trio 4x3 Hub Widget -->
+      <receiver
+          android:name=".AloyTrioWidgetProvider"
+          android:exported="true"
+          android:label="Aloy Focus Trio">
+          <intent-filter>
+              <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+          </intent-filter>
+          <meta-data
+              android:name="android.appwidget.provider"
+              android:resource="@xml/aloy_trio_widget_info" />
+      </receiver>
+
+      <!-- Aloy Quad 4x4 Hub Widget -->
+      <receiver
+          android:name=".AloyQuadWidgetProvider"
+          android:exported="true"
+          android:label="Aloy Focus Quad">
+          <intent-filter>
+              <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+          </intent-filter>
+          <meta-data
+              android:name="android.appwidget.provider"
+              android:resource="@xml/aloy_quad_widget_info" />
+      </receiver>
+    </application>
+</manifest>

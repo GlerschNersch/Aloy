@@ -1,0 +1,16 @@
+---
+title: Hardware & Environment Setup
+description: Setting up primary workstation, Bazzite gaming station, Lenny Ubuntu server, and Android/iOS.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Hardware Topology
+
+Aloy is designed to coordinate multiple machines on your local network:
+
+* **Primary Workstation**: Windows 11 / Electron Workstation hosting `aloyServer.cjs` on port `7890`.
+* **Gaming Station (Bazzite)**: IP `192.168.1.111`, Fedora/Bazzite Linux, accessed via SSH.
+* **Storage & Media Host**: IP `192.168.1.106`, Ubuntu Server LTS, accessed via SSH.
+* **Living Room Roku Ultra**: IP `192.168.1.51`, port `8060` ECP.
+* **Mobile Companion**: Android / iOS, connects via LAN / Tailscale.

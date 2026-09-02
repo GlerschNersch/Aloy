@@ -1,0 +1,40 @@
+{
+  "name": "aloy-monorepo",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Aloy Personal AI Assistant Ecosystem — Unified Monorepo",
+  "workspaces": [
+    "apps/desktop",
+    "apps/mobile",
+    "apps/docs",
+    "packages/*"
+  ],
+  "scripts": {
+    "bump": "node scripts/bump-version.cjs",
+    "ui:build": "npm --prefix packages/ui-shared run build",
+    "dev": "npm run dev:desktop",
+    "dev:desktop": "npm --prefix apps/desktop run dev",
+    "dev:server": "node -e \"require('./apps/desktop/server/aloyServer.cjs').startAloyServer(7890)\"",
+    "dev:mobile": "npm --prefix apps/mobile start",
+    "android": "npm --prefix apps/mobile run android",
+    "ios": "npm --prefix apps/mobile run ios",
+    "electron:dev": "npm --prefix apps/desktop run electron:dev",
+    "electron:start": "npm --prefix apps/desktop run electron:start",
+    "test": "npm run test:desktop",
+    "test:desktop": "npm --prefix apps/desktop test",
+    "test:mobile": "npm --prefix apps/mobile test",
+    "mindwalk:serve": "mindwalk serve --port 8765 --no-open",
+    "mindwalk:map": "mindwalk map --no-open .",
+    "docs": "npm --prefix apps/docs run dev",
+    "docs:build": "npm --prefix apps/docs run build"
+  },
+  "keywords": [
+    "aloy",
+    "ai-assistant",
+    "desktop",
+    "mobile",
+    "electron",
+    "react-native"
+  ],
+  "author": "GlerschNersch"
+}

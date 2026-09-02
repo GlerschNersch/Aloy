@@ -1,0 +1,3 @@
+# Aloy SMB2 Continual Learning Log (Validated Coordinates Only)
+[2026-08-10T15:45:00Z] Calibrated jump timing for World 1-1 World Start. Optimal lead distance: 16-60px.
+

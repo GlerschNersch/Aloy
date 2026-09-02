@@ -1,0 +1,37 @@
+---
+title: Aloy Developer Docs
+description: The comprehensive technical guide and API reference for the Aloy Local-First AI Ecosystem.
+template: splash
+hero:
+  tagline: A Local-First Autonomous AI Companion & Operating System uniting Desktop, Mobile, Smart Home, and Remote Compute.
+  image:
+    html: "<div style='font-size: 5rem; text-align: center; filter: drop-shadow(0 0 24px #00f2fe88);'>⚡</div>"
+  actions:
+    - text: Explore Technical Specs
+      link: /docs/guides/quickstart/
+      icon: right-arrow
+      variant: primary
+    - text: System Architecture
+      link: /docs/architecture/overview/
+      icon: document
+      variant: secondary
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Core Architecture Pillars
+
+<CardGrid stagger>
+  <Card title="📱 Cross-Platform Parity" icon="laptop">
+    Unified Electron Desktop workstation app paired with a full-featured React Native Android & iOS mobile client over Tailscale/LAN.
+  </Card>
+  <Card title="⚡ The Pantheon Sub-Agents" icon="puzzle">
+    Discrete autonomous engines: **Hermes** (Dialectic Memory), **Hephaestus** (Autonomous Dev), **Athena** (Research), **Apollo** (Recall), and **Minerva** (Smart Home/Vision).
+  </Card>
+  <Card title="📺 Universal Media Dispatcher" icon="external">
+    Cast and stream media across living room Roku Ultra (ECP), Jellyfin, Linux gaming rigs (Bazzite), and headless Ubuntu servers (Lenny).
+  </Card>
+  <Card title="🛡️ Local-First Privacy" icon="shield">
+    Operates 100% locally via Ollama with zero mandatory cloud telemetry. Intelligent escalation to Claude 3.5 Sonnet / Gemini only on low confidence.
+  </Card>
+</CardGrid>

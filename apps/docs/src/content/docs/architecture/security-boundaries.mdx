@@ -1,0 +1,33 @@
+---
+title: Security & Local-First Boundaries
+description: Technical specification of Aloy's authentication model and filesystem sandbox.
+---
+
+Aloy implements a multi-tier defense-in-depth model protecting local hardware, file access, and remote SSH credentials.
+
+## 1. Canonical Realpath Sandbox
+
+The `/api/media/stream` route serves media directly to LAN smart players (Roku, VLC) that cannot send Authorization headers. It enforces two strict validation gates:
+
+```javascript
+// Two independent validation gates:
+// 1. Canonical realpath must sit strictly within whitelisted media roots
+const realPath = fs.realpathSync(rawPath);
+const isInSandbox = [MOVIES_DIR, TV_SHOWS_DIR, JELLYFIN_DIR].some(dir => realPath.startsWith(dir));
+
+// 2. Extension must be a verified streaming container
+const isStreamable = ['.mp4', '.mkv', '.avi', '.m4v', '.mov'].includes(path.extname(realPath));
+```
+
+:::danger[Security Rule]
+Never remove canonical realpath validation to resolve a playback issue. Any out-of-boundary probe returns a silent HTTP 404 without leaking filesystem metadata.
+:::
+
+## 2. Server-Side Secret Isolation
+
+| Secret Variable | Usage | Location |
+| :--- | :--- | :--- |
+| `HA_TOKEN` | Home Assistant REST / WebSocket | Server `process.env` only (never shipped in dist) |
+| `LENNY_SUDO_PASS` | Elevated SSH remote commands | Read dynamically at execution time |
+| `BAZZITE_SUDO_PASS` | Gaming station telemetry & updates | Read dynamically at execution time |
+| `ANTHROPIC_API_KEY` | Low-confidence model escalation | Server `confidenceEscalation.cjs` |

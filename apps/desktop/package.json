@@ -1,0 +1,78 @@
+{
+  "name": "ollama-pro-app",
+  "private": true,
+  "version": "2.0.0",
+  "main": "electron.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"node -e \\\"require('./server/aloyServer.cjs').startAloyServer(7890)\\\"\" \"vite\"",
+    "build": "vite build",
+    "lint": "oxlint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "preview": "vite preview",
+    "electron:start": "electron .",
+    "electron:dev": "concurrently \"vite --port 5173 --strictPort\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:build": "vite build && electron-builder",
+    "pack:asar": "vite build && node scripts/packApp.cjs",
+    "smoke": "node scripts/smoke.cjs",
+    "smoke:boot": "node -e \"process.env.ALOY_SMOKE_BOOT=1;require('./scripts/smoke.cjs')\""
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
+    "@firecrawl/anydoc": "^0.1.8",
+    "@google/genai": "^2.15.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "canvas-confetti": "^1.9.4",
+    "dompurify": "^3.4.12",
+    "express": "^5.2.1",
+    "framer-motion": "^12.42.2",
+    "highlight.js": "^11.11.1",
+    "lucide-react": "^1.27.0",
+    "mammoth": "^1.12.0",
+    "marked": "^18.0.7",
+    "pdfjs-dist": "^6.1.200",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "ssh2": "^1.17.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.0",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "concurrently": "^10.0.4",
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
+    "jsdom": "^29.1.1",
+    "oxlint": "^1.71.0",
+    "vite": "^8.1.1",
+    "vitest": "^4.1.10",
+    "wait-on": "^9.1.0"
+  },
+  "build": {
+    "appId": "com.aloy.app",
+    "productName": "Aloy",
+    "files": [
+      "dist/**/*",
+      "electron.cjs",
+      "preload.cjs",
+      "server/**/*",
+      "src/services/**/*",
+      "!src/services/**/*.test.js",
+      "mcp-servers.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    }
+  }
+}

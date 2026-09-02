@@ -1,0 +1,48 @@
+---
+title: Universal UI & Cross-Platform Mitosis Architecture
+description: How Aloy compiles single-source JSX components to React 19 Desktop and React Native Mobile.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Aloy uses **[Builder.io Mitosis](https://github.com/BuilderIO/mitosis)** within `packages/ui-shared` to maintain a single source of truth for all Bento Grid tiles, metric gauges, and agent-generated UI components.
+
+## Topology
+
+```mermaid
+flowchart TD
+    Lite["📦 packages/ui-shared/src/*.lite.jsx\n(Universal Component Specification)"]
+    Compiler["⚙️ Mitosis AST Compiler\n(npm run ui:build)"]
+    
+    ReactOut["💻 dist/react/*.jsx\n(React 19 + Electron + Docs)"]
+    RNOut["📱 dist/react-native/*.jsx\n(React Native + OnePlus 15)"]
+    
+    Desktop["💻 Aloy Desktop App"]
+    Mobile["📱 Aloy Mobile APK"]
+    Docs["📖 Aloy Developer Docs"]
+    
+    Lite --> Compiler
+    Compiler --> ReactOut
+    Compiler --> RNOut
+    
+    ReactOut --> Desktop
+    ReactOut --> Docs
+    RNOut --> Mobile
+```
+
+## Universal Component Suite
+
+The following primitives are defined once in `packages/ui-shared/src/` and compiled for both web DOM and native mobile:
+
+1. **`BentoTile`**: Glassmorphism container with status pills, header actions, and responsive content slots.
+2. **`StatusBadge`**: Dynamic pulsing online/offline/busy health indicator.
+3. **`MetricPill`**: Compact metric counter (e.g. GPU Temp, Token Savings, Library Counts).
+4. **`QuickActionButton`**: Unified touchable button with primary/secondary styles.
+
+## Compilation Command
+
+To recompile all universal components across the monorepo:
+
+```bash
+npm run ui:build
+```

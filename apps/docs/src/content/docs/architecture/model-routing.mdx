@@ -1,0 +1,12 @@
+---
+title: Model Routing & Hybrid Escalation
+description: Multi-tier inference routing between local Ollama and cloud foundation models.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Inference Tiers
+
+1. **Tier 1 (Local Ollama)**: Default for 90%+ of conversational tasks and tool routing. Free, fast, private.
+2. **Tier 2 (Confidence Escalation)**: When model confidence is low or complex reasoning is required, automatically routes to Claude 3.5 Sonnet / Gemini 1.5 Pro.
+3. **Tier 3 (Sub-Agent Delegations)**: Multi-agent engines delegate heavy reasoning to dedicated providers.

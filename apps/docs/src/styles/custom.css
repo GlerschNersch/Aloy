@@ -1,0 +1,206 @@
+/* ==========================================================================
+   Google Developer Style Guide (developers.google.com) Theme for Aloy Docs
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Google Developer Palette - Dark Mode (Default) */
+  --sl-color-accent-low: rgba(26, 115, 232, 0.15);
+  --sl-color-accent: #8ab4f8; /* Google Blue 300 */
+  --sl-color-accent-high: #aecbfa;
+  --sl-color-white: #e8eaed;
+  --sl-color-gray-1: #bdc1c6;
+  --sl-color-gray-2: #9aa0a6;
+  --sl-color-gray-3: #5f6368;
+  --sl-color-gray-4: #3c4043;
+  --sl-color-gray-5: #202124;
+  --sl-color-gray-6: #171717;
+  --sl-color-black: #202124; /* Google DevSite dark background */
+
+  --sl-font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --sl-font-mono: 'Roboto Mono', 'Fira Code', Menlo, monospace;
+}
+
+:root[data-theme='light'] {
+  /* Google Developer Palette - Light Mode */
+  --sl-color-accent-low: #e8f0fe;
+  --sl-color-accent: #1a73e8; /* Google Blue 600 */
+  --sl-color-accent-high: #174ea6;
+  --sl-color-white: #202124;
+  --sl-color-gray-1: #3c4043;
+  --sl-color-gray-2: #5f6368;
+  --sl-color-gray-3: #80868b;
+  --sl-color-gray-4: #dadce0;
+  --sl-color-gray-5: #f1f3f4;
+  --sl-color-gray-6: #f8f9fa;
+  --sl-color-black: #ffffff;
+}
+
+/* 🌐 Header Bar — Matching developers.google.com */
+header.header {
+  border-bottom: 1px solid var(--sl-color-gray-4);
+  background-color: var(--sl-color-black);
+  height: 4rem;
+}
+
+.site-title {
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--sl-color-white) !important;
+  letter-spacing: -0.01em;
+}
+
+/* 🌲 Left Navigation Sidebar */
+.sidebar-pane {
+  background-color: var(--sl-color-black);
+  border-right: 1px solid var(--sl-color-gray-4);
+}
+
+.sidebar-pane summary {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sl-color-gray-2);
+  padding: 0.5rem 0;
+}
+
+.sidebar-pane a {
+  font-size: 0.9rem;
+  color: var(--sl-color-gray-1);
+  border-radius: 0 16px 16px 0;
+  padding: 0.35rem 0.75rem;
+  transition: all 0.15s ease;
+}
+
+.sidebar-pane a[aria-current="page"] {
+  background-color: var(--sl-color-accent-low);
+  color: var(--sl-color-accent);
+  font-weight: 600;
+  border-left: 3px solid var(--sl-color-accent);
+}
+
+/* 📄 Main Content & Typography */
+.content-panel {
+  padding: 2.5rem 3rem;
+  max-width: 900px;
+}
+
+:root {
+  --sl-text-hero: clamp(1.8rem, 6vw, 3rem) !important;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--sl-color-white);
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  hyphens: none !important;
+}
+
+h1, .hero h1, h1#_top, .hero .stack h1 {
+  font-size: clamp(1.75rem, 5.5vw, 2.6rem) !important;
+  line-height: 1.25 !important;
+  margin-bottom: 1rem;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  hyphens: none !important;
+}
+
+h2 {
+  font-size: 1.6rem;
+  margin-top: 2.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--sl-color-gray-4);
+}
+
+p, li {
+  font-family: 'Roboto', sans-serif;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--sl-color-gray-1);
+}
+
+/* ⚠️ Google Developer Callout Asides (Note, Important, Caution, Danger) */
+.starlight-aside {
+  border-radius: 8px;
+  border-left-width: 4px;
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+}
+
+.starlight-aside--note {
+  border-left-color: #1a73e8 !important;
+  background-color: rgba(26, 115, 232, 0.1) !important;
+}
+
+.starlight-aside--tip {
+  border-left-color: #34a853 !important; /* Google Green */
+  background-color: rgba(52, 168, 83, 0.1) !important;
+}
+
+.starlight-aside--caution {
+  border-left-color: #fbbc04 !important; /* Google Yellow */
+  background-color: rgba(251, 188, 4, 0.1) !important;
+}
+
+.starlight-aside--danger {
+  border-left-color: #ea4335 !important; /* Google Red */
+  background-color: rgba(234, 67, 53, 0.1) !important;
+}
+
+/* 📊 Google Developer Style Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--sl-color-gray-4);
+}
+
+th {
+  background-color: var(--sl-color-gray-5);
+  color: var(--sl-color-white);
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--sl-color-gray-4);
+}
+
+td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--sl-color-gray-4);
+  font-size: 0.92rem;
+}
+
+/* 💻 Code Blocks */
+pre.shiki {
+  border-radius: 8px !important;
+  border: 1px solid var(--sl-color-gray-4) !important;
+  background-color: #1e1e1e !important;
+}
+
+/* 🎯 Right "On This Page" Table of Contents */
+.right-sidebar-panel {
+  border-left: 1px solid var(--sl-color-gray-4);
+}
+
+.right-sidebar-panel summary,
+.right-sidebar-panel h2 {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sl-color-gray-2);
+  border-bottom: none;
+  margin-top: 0;
+}

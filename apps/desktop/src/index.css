@@ -1,0 +1,334 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* Deep navy/slate rather than near-pure-black, with lower-contrast,
+     slate-tinted borders for a calmer, more spacious dark mode. */
+  --bg-dark: #10141f;
+  --bg-surface: #171d2c;
+  --bg-card: rgba(30, 38, 56, 0.6);
+  --bg-card-hover: rgba(38, 48, 70, 0.75);
+  --border-glass: rgba(148, 163, 184, 0.1);
+  --border-glass-active: rgba(0, 242, 254, 0.28);
+  
+  --accent-cyan: #00f2fe;
+  --accent-blue: #4facfe;
+  --accent-purple: #7f00ff;
+  --accent-pink: #ff007f;
+  --accent-glow: rgba(0, 242, 254, 0.15);
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  height: 100vh;
+  width: 100vw;
+  -webkit-font-smoothing: antialiased;
+}
+
+html.hud-mode, body.hud-mode, #root.hud-mode {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+  display: flex;
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 242, 254, 0.3);
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glass);
+}
+
+.glass-input {
+  background: rgba(10, 14, 23, 0.6);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.glass-input:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-blue) 50%, var(--accent-purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gradient-bg-accent {
+  background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+  color: #000;
+  font-weight: 600;
+}
+
+.gradient-border-btn {
+  position: relative;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  transition: all 0.2s ease;
+}
+
+.gradient-border-btn:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+/* Markdown lists in chat messages — the global * { margin/padding: 0 }
+   reset above left these entirely to the browser's default marker gutter,
+   which reads as an unstyled, inconsistent indent next to everything else
+   in this app's deliberately tuned spacing. */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  color: var(--accent-cyan);
+  font-weight: 700;
+  margin-top: 0.85em;
+  margin-bottom: 0.35em;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.markdown-body h1 { font-size: 1.15rem; }
+.markdown-body h2 { font-size: 1.02rem; border-bottom: 1px solid rgba(0, 242, 254, 0.15); padding-bottom: 3px; }
+.markdown-body h3 { font-size: 0.92rem; color: #38bdf8; }
+.markdown-body h4 { font-size: 0.85rem; color: #94a3b8; }
+
+.markdown-body strong {
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.8rem !important;
+  margin: 0.5em 0 !important;
+  list-style-position: outside !important;
+}
+
+.markdown-body ul {
+  list-style-type: disc !important;
+}
+
+.markdown-body ol {
+  list-style-type: decimal !important;
+}
+
+.markdown-body ul ul,
+.markdown-body ol ul {
+  list-style-type: circle !important;
+  padding-left: 1.5rem !important;
+  margin: 0.3em 0 !important;
+}
+
+.markdown-body ul ul ul,
+.markdown-body ol ol ul {
+  list-style-type: square !important;
+  padding-left: 1.5rem !important;
+  margin: 0.3em 0 !important;
+}
+
+.markdown-body li {
+  margin: 0.35em 0 !important;
+  line-height: 1.65 !important;
+}
+
+.markdown-body li::marker {
+  color: var(--accent-cyan) !important;
+}
+
+.markdown-body ul ul li::marker {
+  color: #38bdf8 !important;
+}
+
+.markdown-body p {
+  margin: 0.5em 0;
+  line-height: 1.65;
+}
+
+.markdown-body p:first-child,
+.markdown-body ul:first-child,
+.markdown-body ol:first-child,
+.markdown-body h1:first-child,
+.markdown-body h2:first-child,
+.markdown-body h3:first-child {
+  margin-top: 0;
+}
+
+.markdown-body p:last-child,
+.markdown-body ul:last-child,
+.markdown-body ol:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.8em 0;
+  font-size: 0.82rem;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.markdown-body th {
+  background: rgba(0, 242, 254, 0.08);
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+
+/* Code block styles with responsive overflow */
+pre {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+pre code {
+  font-family: var(--font-mono) !important;
+  font-size: 0.875rem !important;
+  line-height: 1.6 !important;
+}
+
+.hljs {
+  background: rgba(8, 11, 19, 0.95) !important;
+  padding: 1rem !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--border-glass) !important;
+}
+
+/* Inline code spans (single-backtick text) had no styling of their own and
+   fell back to the browser's raw monospace default, which reads as a harsh,
+   oversized block mid-sentence for plain names/paths. Soften it to a small
+   muted pill instead — fenced code blocks (pre code, above) are untouched. */
+code:not(pre code) {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: rgba(255, 255, 255, 0.07);
+  color: #cbd5e1;
+  padding: 0.15em 0.4em;
+  border-radius: 5px;
+}
+
+/* Spinning refresh/loading icons */
+.spin {
+  animation: spin-anim 1s linear infinite;
+}
+
+@keyframes spin-anim {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Pulsing Status Dot */
+.pulse-green {
+  box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  animation: pulse-green-anim 2s infinite;
+}
+
+@keyframes pulse-green-anim {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+.pulse-cyan {
+  box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.7);
+  animation: pulse-cyan-anim 1.5s infinite;
+}
+
+@keyframes pulse-cyan-anim {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 242, 254, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 242, 254, 0);
+  }
+}
+
+/* ==========================================
+   RESPONSIVE DESIGN & MEDIA QUERIES
+   ========================================== */
+
+@media (max-width: 900px) {
+  .app-sidebar {
+    position: fixed;
+    z-index: 100;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.8);
+  }
+
+  .chat-area-container {
+    width: 100% !important;
+  }
+}
+
+/* Respect users who prefer reduced motion: disable the infinite pulse
+   animations and near-instantly resolve transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

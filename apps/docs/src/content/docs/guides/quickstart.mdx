@@ -1,0 +1,62 @@
+---
+title: Quickstart Guide
+description: Get Aloy Desktop, Aloy Server, and Aloy Mobile running on your local network.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+This guide walks you through setting up the complete Aloy ecosystem on your workstation.
+
+:::note[System Requirements]
+* **OS**: Windows 11 / Linux (Fedora, Ubuntu) / macOS (Apple Silicon)
+* **Node.js**: v20.x or higher
+* **Ollama**: Local LLM runner with `llama3.2` or `mistral`
+:::
+
+## 1. Clone & Install Dependencies
+
+```bash
+# Clone the repository
+git clone https://github.com/GlerschNersch/aloy.git
+cd aloy
+
+# Install monorepo dependencies
+npm install
+```
+
+## 2. Configure Environment
+
+Create `~/.aloy-server/.env` with your local configuration:
+
+```env
+# Home Assistant Bearer Token
+HA_TOKEN=your_long_lived_access_token
+
+# Optional Cloud Escalation
+ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=AIzaSy...
+
+# Remote Rig Passwords
+LENNY_SUDO_PASS=your_password
+BAZZITE_SUDO_PASS=your_password
+```
+
+## 3. Starting the Applications
+
+<Tabs>
+  <TabItem label="Desktop Workstation">
+    ```bash
+    npm run electron:start
+    ```
+  </TabItem>
+  <TabItem label="Backend Headless Server">
+    ```bash
+    npm run dev:server
+    ```
+  </TabItem>
+  <TabItem label="Mobile Companion">
+    ```bash
+    npm run android
+    ```
+  </TabItem>
+</Tabs>

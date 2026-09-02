@@ -1,0 +1,74 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing & Coverage
+coverage/
+*.lcov
+.nyc_output
+
+# Production & Builds
+dist/
+build/
+release/
+*.apk
+*.aab
+*.dex
+
+# Android specifics
+apps/mobile/android/.gradle/
+apps/mobile/android/app/build/
+apps/mobile/android/.idea/
+*.keystore
+!apps/mobile/android/app/debug.keystore
+
+# System & OS
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+
+# AI / Internal storage
+.system_generated/
+.tempmediaStorage/
+.gemini/
+.staging/
+data/
+scratch/
+test_skills/
+*.png
+
+# Secrets & Environment
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.token
+mcp-servers.json
+
+# Local Machine Scripts
+run-aloy.vbs
+pin_to_taskbar.ps1
+
+# AI Models & Datasets
+*.gguf
+*.bin
+*.safetensors
+*.pt
+apps/desktop/training/*.jsonl
+!apps/desktop/training/sft_sample.jsonl
+apps/desktop/data/
+docs/diff_*.js
+docs/check_xy.js
+.astro/
+apps/docs/dist/
+
+# Binaries, Bundles & State Dumps
+*.State
+*.bak
+*.bundle
+*.asar
+apps/mobile/android/app/src/main/assets/*.bundle
+docs/memory_backup_*/

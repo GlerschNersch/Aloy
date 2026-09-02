@@ -1,0 +1,17 @@
+{
+  "name": "@aloy/ui-shared",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Universal Mitosis-powered cross-platform UI primitives for Aloy Desktop and Mobile",
+  "main": "./dist/react/index.js",
+  "module": "./dist/react/index.esm.js",
+  "react-native": "./dist/react-native/index.js",
+  "scripts": {
+    "build": "node ./compile.cjs",
+    "dev": "node ./compile.cjs --watch"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@builder.io/mitosis": "^0.3.0"
+  }
+}

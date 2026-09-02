@@ -1,0 +1,25 @@
+{
+  "servers": [
+    {
+      "name": "filesystem",
+      "enabled": true,
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "C:\\Users\\User\\AloyFiles", "P:\\"]
+    },
+    {
+      "name": "fetch",
+      "enabled": true,
+      "command": "uvx",
+      "_comment": "mcp-server-fetch's mcp dependency is unpinned and uv resolves it to the newer mcp 2.0.0 release, which renamed MCPError and breaks it (ImportError) — pin below 2.0.0 until upstream fixes this.",
+      "args": ["--with", "mcp<2.0.0", "mcp-server-fetch"],
+      "env": { "PYTHONIOENCODING": "utf-8" }
+    },
+    {
+      "name": "git",
+      "enabled": true,
+      "command": "uvx",
+      "_comment": "Same mcp<2.0.0 pin as fetch — same upstream break. No -r/--repository flag: every tool takes repo_path as a per-call argument, so it's multi-repo capable.",
+      "args": ["--with", "mcp<2.0.0", "mcp-server-git"]
+    }
+  ]
+}

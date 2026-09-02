@@ -1,0 +1,28 @@
+{
+ "entries": [
+  {
+   "world": 0,
+   "stage": 0,
+   "x": 116,
+   "jumpEarlyBy": 16
+  },
+  {
+   "world": 0,
+   "stage": 0,
+   "x": 216,
+   "jumpEarlyBy": 60
+  },
+  {
+   "world": 0,
+   "stage": 0,
+   "x": 177,
+   "jumpEarlyBy": 60
+  },
+  {
+   "world": 0,
+   "stage": 0,
+   "x": 160,
+   "jumpEarlyBy": 8
+  }
+ ]
+}

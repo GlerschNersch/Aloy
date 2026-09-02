@@ -1,0 +1,46 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+release
+test-results
+playwright-report
+
+# Local environment files (contain secrets like VITE_HA_TOKEN)
+.env
+.env.*
+!.env.example
+
+# Local MCP server config (may contain machine-specific paths/commands)
+mcp-servers.json
+!mcp-servers.example.json
+
+# Backups from Aloy's self-modification tool (propose_ui_change) — reviewed
+# via git diff on the real source, these are just pre-write safety copies
+.pending-ui-changes/
+
+# Packaged build artifact (regenerate via electron-builder, don't track)
+app.asar
+
+# Local fine-tuning model weights — multi-GB GGUF files, not source
+training/gguf/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

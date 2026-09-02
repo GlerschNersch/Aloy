@@ -1,0 +1,53 @@
+---
+title: System Architecture & Nervous System
+description: Comprehensive overview of Aloy's cross-platform distributed architecture.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import ArchifyDiagram from '../../../components/ArchifyDiagram.astro';
+
+Aloy operates as a distributed, local-first system spanning your primary workstation, mobile device, smart home, and remote Linux servers.
+
+<ArchifyDiagram title="Interactive Distributed Nervous System" />
+
+## Distributed Topology
+
+```mermaid
+flowchart TD
+    subgraph Clients["Clients Layer"]
+        Desktop["💻 Aloy Desktop (Electron + React 19)"]
+        Mobile["📱 Aloy Mobile (React Native + Notifee)"]
+    end
+
+    subgraph Core["Aloy Core Nervous System (Port 7890)"]
+        Server["🚀 Express 5 Server (aloyServer.cjs)"]
+        Router["🧭 Model Router (Ollama / Claude / Gemini)"]
+        Security["🛡️ Security Guard (Realpath Sandbox & Bearer Auth)"]
+    end
+
+    subgraph Pantheon["⚡ The Pantheon Engines"]
+        Hermes["📜 Hermes (Dialectic Memory)"]
+        Heph["🔨 Hephaestus (Autonomous Dev)"]
+        Athena["🦉 Athena (Research Synthesis)"]
+        Apollo["🧠 Apollo (Episodic Recall)"]
+        Minerva["👁️ Minerva (Smart Home & Vision)"]
+    end
+
+    subgraph Targets["Physical World & Remote Rigs"]
+        HA["🏠 Home Assistant (REST & WebSocket)"]
+        Roku["📺 Living Room Roku Ultra (Port 8060 ECP)"]
+        Bazzite["🎮 Bazzite Gaming Station (SSH)"]
+        Lenny["🖥️ Lenny Media Server (SSH)"]
+    end
+
+    Desktop --> Server
+    Mobile --> Server
+    Server --> Router
+    Server --> Security
+    Server --> Pantheon
+    Pantheon --> Targets
+```
+
+:::tip[Architectural Rule]
+The Aloy Mobile app is a thin client that connects directly to `aloyServer.cjs` over Tailscale/LAN. Chat threads, memory vaults, and tool executions are strictly owned by the primary server.
+:::

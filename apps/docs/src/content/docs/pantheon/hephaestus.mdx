@@ -1,0 +1,24 @@
+---
+title: 🔨 Hephaestus (Autonomous Dev & PR Review)
+description: Autonomous code development, multi-provider review harness, and automated patch testing.
+---
+
+Hephaestus is Aloy's autonomous engineering forge. It generates code modifications in isolated workspace branches, verifies changes against automated test suites, and orchestrates multi-agent peer reviews.
+
+## Review Pipeline
+
+```mermaid
+sequenceDiagram
+    participant User as 👤 Developer
+    participant Heph as 🔨 Hephaestus Forge
+    participant Vitest as 🧪 Test Runner
+    participant Reviewer as 🤖 Multi-LLM Reviewers (Claude + Gemini)
+
+    User->>Heph: Submit Feature Request / Bugfix
+    Heph->>Heph: Generate Branch & Code Patch
+    Heph->>Vitest: Execute Unit & Regression Tests
+    Vitest-->>Heph: Test Pass / Fail Verification
+    Heph->>Reviewer: Request Independent Code Review
+    Reviewer-->>Heph: Deliver Critique, Score & Risk Level
+    Heph->>User: Present Stage for Approval with Diff
+```

@@ -1,0 +1,35 @@
+{
+  "_meta": {
+    "schema": "aloy-unified-memory",
+    "version": 1,
+    "consolidated_at": "2026-08-16",
+    "note": "Single source of truth for SMB2 continual-learning state. Consolidates aloy_smb2_master_progress.json, bizhawk_hazard_memory.json, hazard_memory_db.json, and death_learnings.json. Sentinel/overflow reads (x_pos=65535, y_pos=255, x=0) were discarded as invalid.",
+    "supersedes": [
+      "aloy_smb2_master_progress.json",
+      "bizhawk_hazard_memory.json",
+      "hazard_memory_db.json",
+      "death_learnings.json"
+    ]
+  },
+  "progress": {
+    "active_world": 1,
+    "active_stage": 1,
+    "total_deaths": 12,
+    "last_death": null,
+    "status": "Died in World 1-1. Retrying from checkpoint.",
+    "last_updated_frame": 6125
+  },
+  "jump_hazards": {
+    "index_base": "world/stage are 0-based (0 = World 1, Stage 1)",
+    "entries": [
+      {"world": 0, "stage": 0, "x": 116, "jumpEarlyBy": 16},
+      {"world": 0, "stage": 0, "x": 216, "jumpEarlyBy": 60},
+      {"world": 0, "stage": 0, "x": 177, "jumpEarlyBy": 60},
+      {"world": 0, "stage": 0, "x": 160, "jumpEarlyBy": 8}
+    ]
+  },
+  "validation": {
+    "rule": "Reject WRAM reads equal to max-uint sentinels (0xFFFF / 0xFF) or 0-coordinate death events; never record hazards or 'lessons' derived from them.",
+    "rejected_examples": {"x_pos": [65535], "y_pos": [255], "x": [0]}
+  }
+}

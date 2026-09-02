@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aloy & HEPHAESTUS // Unified Command Hub</title>
+  <style>
+    :root {
+      --bg-primary: #0a0c10;
+      --bg-surface: #12161f;
+      --bg-surface-raised: #181e2b;
+      --bg-code: #07090e;
+      --border-subtle: #232c3d;
+      --border-focus: #3b82f6;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --aloy-cyan: #06b6d4;
+      --heph-amber: #f59e0b;
+      --ai-judge-purple: #a855f7;
+      --diff-add: #10b981;
+      --diff-add-bg: rgba(16, 185, 129, 0.12);
+      --diff-del: #ef4444;
+      --diff-del-bg: rgba(239, 68, 68, 0.12);
+      --badge-bg: #1e293b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navigation / App Bar */
+    header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-title .aloy-tag { color: var(--aloy-cyan); }
+    .brand-title .sep { color: var(--text-muted); opacity: 0.5; }
+    .brand-title .heph-tag { color: var(--heph-amber); }
+
+    .status-badges {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--badge-bg);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+    }
+
+    .badge.active { border-color: rgba(6, 182, 212, 0.4); color: var(--aloy-cyan); }
+    .badge.forge { border-color: rgba(245, 158, 11, 0.4); color: var(--heph-amber); }
+    .badge.judge { border-color: rgba(168, 85, 247, 0.4); color: var(--ai-judge-purple); }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Main Container (Single Pane of Glass Grid) */
+    .command-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      gap: 20px;
+      padding: 20px;
+      flex: 1;
+      max-width: 1920px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1200px) {
+      .command-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Section Panels */
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 14px 18px;
+      background: var(--bg-surface-raised);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-title.aloy-header { color: var(--aloy-cyan); }
+    .panel-title.heph-header { color: var(--heph-amber); }
+
+    .panel-body {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex: 1;
+    }
+
+    /* Cards & Sub-Panels */
+    .card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .card-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Screen Frame */
+    .screen-wrapper {
+      position: relative;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      background: #000;
+      aspect-ratio: 4/3;
+      max-height: 280px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .screen-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Terminal & Code */
+    pre.code-view {
+      background: var(--bg-code);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.82rem;
+      line-height: 1.45;
+      color: #cbd5e1;
+      overflow-x: auto;
+      max-height: 180px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* Hephaestus Task Feed */
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .task-item {
+      background: var(--bg-surface-raised);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 10px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.15s ease;
+    }
+
+    .task-item:hover {
+      border-color: var(--heph-amber);
+      background: rgba(245, 158, 11, 0.05);
+    }
+
+    .task-item.selected {
+      border-color: var(--heph-amber);
+      box-shadow: 0 0 0 1px var(--heph-amber);
+      background: rgba(245, 158, 11, 0.08);
+    }
+
+    .task-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .task-name {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .task-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .status-pill {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .status-queued { background: #334155; color: #94a3b8; }
+    .status-staging { background: #0369a1; color: #7dd3fc; }
+    .status-testing { background: #7c2d12; color: #fdba74; }
+    .status-staged_for_review { background: #854d0e; color: #fef08a; }
+    .status-deployed { background: #14532d; color: #86efac; }
+    .status-rejected { background: #7f1d1d; color: #fca5a5; }
+    .status-failed { background: #7f1d1d; color: #fca5a5; }
+    .status-rolled_back { background: #4c1d95; color: #d8b4fe; }
+
+    /* Diff Viewer */
+    .diff-container {
+      background: var(--bg-code);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      max-height: 240px;
+      overflow: auto;
+      padding: 8px 0;
+    }
+
+    .diff-line {
+      padding: 2px 12px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .diff-line.add { background: var(--diff-add-bg); color: var(--diff-add); }
+    .diff-line.del { background: var(--diff-del-bg); color: var(--diff-del); }
+    .diff-line.hdr { color: var(--text-muted); font-weight: bold; background: rgba(255,255,255,0.03); }
+
+    /* AI Review / Judge Box */
+    .judge-box {
+      background: rgba(168, 85, 247, 0.06);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .judge-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--ai-judge-purple);
+      text-transform: uppercase;
+    }
+
+    /* Action Buttons */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    button {
+      background: var(--bg-surface-raised);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    button:hover { background: var(--border-subtle); }
+    button.btn-primary { background: #0284c7; border-color: #0284c7; color: #fff; }
+    button.btn-primary:hover { background: #0369a1; }
+    button.btn-forge { background: #d97706; border-color: #d97706; color: #fff; }
+    button.btn-forge:hover { background: #b45309; }
+    button.btn-deploy { background: #15803d; border-color: #15803d; color: #fff; }
+    button.btn-deploy:hover { background: #166534; }
+    button.btn-danger { background: #b91c1c; border-color: #b91c1c; color: #fff; }
+    button.btn-danger:hover { background: #991b1b; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    .modal-overlay.active { display: flex; }
+
+    .modal-content {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 540px;
+      width: 90%;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-content input, .modal-content textarea, .modal-content select {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      color: var(--text-main);
+      padding: 8px 12px;
+      font-size: 0.88rem;
+      width: 100%;
+      outline: none;
+    }
+
+    .modal-content input:focus, .modal-content textarea:focus {
+      border-color: var(--heph-amber);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top App Bar -->
+  <header>
+    <div class="brand-group">
+      <div class="brand-title">
+        <span class="aloy-tag">ALOY</span>
+        <span class="sep">//</span>
+        <span class="heph-tag">HEPHAESTUS</span>
+      </div>
+      <span style="font-size:0.75rem; color:var(--text-muted);">Unified Command & Self-Training Cauldron Studio</span>
+    </div>
+
+    <div class="status-badges">
+      <div class="badge active"><span class="dot"></span> Aloy: Online</div>
+      <div class="badge forge"><span class="dot"></span> Cauldron: Active</div>
+      <div class="badge judge" id="judge-badge"><span class="dot"></span> AI Reviewer: Claude / Gemini</div>
+      <div class="badge" id="training-stats-badge"><span class="dot"></span> QLoRA Buffer: 0 Pairs</div>
+    </div>
+  </header>
+
+  <!-- Main Grid (Single Pane of Glass) -->
+  <main class="command-grid">
+    
+    <!-- ============================================== -->
+    <!-- LEFT PANE: ALOY OPERATIONAL RUNTIME             -->
+    <!-- ============================================== -->
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title aloy-header">
+          <span>◆</span> Aloy Live Runtime & Vision
+        </div>
+        <button onclick="runVisionAnalysis()" class="btn-primary" style="padding:4px 10px; font-size:0.75rem;">
+          Run Vision Analysis
+        </button>
+      </div>
+
+      <div class="panel-body">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+          <!-- Screen Preview -->
+          <div class="card">
+            <div class="card-title">Live Visual Telemetry</div>
+            <div class="screen-wrapper">
+              <img id="live-screenshot" src="/api/screenshot" alt="BizHawk Screen Stream" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100%\' height=\'100%\'><text x=\'50%\' y=\'50%\' fill=\'%23666\' dominant-baseline=\'middle\' text-anchor=\'middle\'>Awaiting Screen Feed</text></svg>'">
+            </div>
+          </div>
+
+          <!-- Progress / Game State -->
+          <div class="card">
+            <div class="card-title">Active Progress State</div>
+            <pre class="code-view" id="aloy-progress">Loading progress...</pre>
+          </div>
+        </div>
+
+        <!-- Recent Learnings -->
+        <div class="card">
+          <div class="card-title">Aloy Memory & Recent Learnings</div>
+          <pre class="code-view" id="aloy-learnings" style="max-height:120px;">Loading memory logs...</pre>
+        </div>
+
+        <!-- Hazard Database -->
+        <div class="card">
+          <div class="card-title">Hazard Memory Index</div>
+          <pre class="code-view" id="aloy-hazards" style="max-height:110px;">Loading hazard map...</pre>
+        </div>
+
+        <!-- Vision / Perception Output -->
+        <div class="card">
+          <div class="card-title">Perception & Scene Recognition</div>
+          <pre class="code-view" id="vision-output" style="max-height:110px;">Standby. Click 'Run Vision Analysis' to inspect screen.</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- RIGHT PANE: THE CAULDRON (HEPHAESTUS DEV STUDIO) -->
+    <!-- ============================================== -->
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title heph-header">
+          <span>⚙</span> The Cauldron: HEPHAESTUS Studio
+        </div>
+        <button onclick="openNewTaskModal()" class="btn-forge" style="padding:4px 10px; font-size:0.75rem;">
+          + Dispatch Work Order
+        </button>
+      </div>
+
+      <div class="panel-body">
+        
+        <!-- Active Work Orders Feed -->
+        <div class="card">
+          <div class="card-title">
+            <span>Engineering Work Orders</span>
+            <span id="task-count" style="color:var(--heph-amber); font-weight:bold;">0 Active</span>
+          </div>
+          <div class="task-list" id="task-list-container">
+            <div style="color:var(--text-muted); font-size:0.8rem; padding:8px;">No active engineering tasks. Click '+ Dispatch Work Order' to assign code changes to Hephaestus.</div>
+          </div>
+        </div>
+
+        <!-- Selected Task Details & Staged Diff -->
+        <div class="card" id="selected-task-view">
+          <div class="card-title">
+            <span>Staged Changes & Verification</span>
+            <span id="selected-task-status" class="status-pill status-queued">No Selection</span>
+          </div>
+
+          <div id="task-details-header" style="font-size:0.85rem; margin-bottom:10px; color:var(--text-muted);">
+            Select a task above to inspect sandbox logs and review diffs.
+          </div>
+
+          <!-- Staged Diff Viewer -->
+          <div class="diff-container" id="diff-viewer">
+            <div class="diff-line hdr">// No diff selected. HEPHAESTUS sandbox changes will render here.</div>
+          </div>
+
+          <!-- AI Code Review & Teacher Judge Card -->
+          <div class="judge-box" id="judge-details" style="display:none;">
+            <div class="judge-header">
+              <span id="judge-provider">Claude / Gemini Review</span>
+              <span id="judge-score" style="color:var(--diff-add);">Score: 0/100</span>
+            </div>
+            <div id="judge-summary" style="font-size:0.82rem; color:var(--text-main); font-weight:600;"></div>
+            <div id="judge-critique" style="font-size:0.78rem; color:var(--text-muted); line-height:1.4;"></div>
+            <div id="judge-training-status" style="font-size:0.72rem; color:var(--heph-amber); margin-top:4px;">
+              🎯 Captured into QLoRA Training Flywheel
+            </div>
+          </div>
+
+          <!-- Execution Logs -->
+          <div class="card-title" style="margin-top:12px;">Sandbox Execution & Test Logs</div>
+          <pre class="code-view" id="heph-logs" style="max-height:120px;">Awaiting task execution logs...</pre>
+
+          <!-- Operator Control Actions -->
+          <div class="btn-row" id="task-action-controls" style="display:none; justify-content:space-between; margin-top:12px;">
+            <div style="display:flex; gap:8px;">
+              <button onclick="approveCurrentTask()" class="btn-deploy">🚀 Approve & Deploy</button>
+              <button onclick="rejectCurrentTask()" class="btn-danger">❌ Reject</button>
+            </div>
+            <button onclick="rollbackCurrentTask()" class="btn-primary" id="btn-rollback" style="display:none;">⏪ Emergency Rollback</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal for Creating Engineering Tasks -->
+  <div class="modal-overlay" id="task-modal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="color:var(--heph-amber); font-size:1.1rem;">Dispatch Task to HEPHAESTUS</h3>
+        <button onclick="closeNewTaskModal()" style="padding:2px 8px; border:none; background:transparent;">✕</button>
+      </div>
+
+      <div>
+        <label style="font-size:0.75rem; color:var(--text-muted);">Task Title</label>
+        <input type="text" id="modal-title" placeholder="e.g. Add level victory sound effect tool">
+      </div>
+
+      <div>
+        <label style="font-size:0.75rem; color:var(--text-muted);">Category</label>
+        <select id="modal-category">
+          <option value="feature">Feature / Tool</option>
+          <option value="bugfix">Bugfix / Patch</option>
+          <option value="refactor">Refactor / Performance</option>
+          <option value="mcp_tool">MCP Protocol Integration</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size:0.75rem; color:var(--text-muted);">Technical Requirements & Description</label>
+        <textarea id="modal-desc" rows="3" placeholder="Describe the behavior, parameters, and safety requirements..."></textarea>
+      </div>
+
+      <div>
+        <label style="font-size:0.75rem; color:var(--text-muted);">Target Files (Comma separated)</label>
+        <input type="text" id="modal-files" placeholder="e.g. server/sound.cjs, src/services/tools.js">
+      </div>
+
+      <div class="btn-row" style="justify-content:flex-end; margin-top:8px;">
+        <button onclick="closeNewTaskModal()">Cancel</button>
+        <button onclick="submitNewTask()" class="btn-forge">Dispatch to Cauldron</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let selectedTaskId = null;
+    let tasksCache = [];
+
+    async function updateAloyRuntime() {
+      try {
+        const statusRes = await fetch('/api/status').then(r => r.json());
+        if (statusRes.progress) {
+          document.getElementById('aloy-progress').textContent = JSON.stringify(statusRes.progress, null, 2);
+        }
+        if (statusRes.learnings) {
+          document.getElementById('aloy-learnings').textContent = statusRes.learnings.join('\n') || 'No learnings recorded yet.';
+        }
+      } catch (e) {}
+
+      try {
+        const hazardRes = await fetch('/api/hazard').then(r => r.json());
+        document.getElementById('aloy-hazards').textContent = JSON.stringify(hazardRes, null, 2);
+      } catch (e) {}
+
+      // Refresh Screenshot timestamp
+      const img = document.getElementById('live-screenshot');
+      img.src = '/api/screenshot?' + Date.now();
+    }
+
+    async function updateTrainingFlywheelStats() {
+      try {
+        const stats = await fetch('/api/hephaestus/training-stats').then(r => r.json());
+        const badge = document.getElementById('training-stats-badge');
+        if (stats.totalSamples !== undefined) {
+          badge.innerHTML = `<span class="dot"></span> QLoRA Buffer: ${stats.totalSamples} Pairs (${stats.positiveCount} Verified, ${stats.correctionCount} Critiques)`;
+        }
+      } catch (e) {}
+    }
+
+    async function updateHephaestusFeed() {
+      try {
+        const tasks = await fetch('/api/hephaestus/tasks').then(r => r.json());
+        tasksCache = tasks;
+        document.getElementById('task-count').textContent = `${tasks.length} Total (${tasks.filter(t => t.status !== 'deployed' && t.status !== 'rejected').length} Active)`;
+
+        const container = document.getElementById('task-list-container');
+        if (tasks.length === 0) {
+          container.innerHTML = `<div style="color:var(--text-muted); font-size:0.8rem; padding:8px;">No tasks in Cauldron yet. Dispatch a work order above!</div>`;
+          return;
+        }
+
+        container.innerHTML = tasks.map(t => `
+          <div class="task-item ${t.id === selectedTaskId ? 'selected' : ''}" onclick="selectTask('${t.id}')">
+            <div class="task-meta">
+              <div class="task-name">${escapeHtml(t.title)}</div>
+              <div class="task-sub">ID: ${t.id} • ${t.category} • Branch: ${t.branch}</div>
+            </div>
+            <span class="status-pill status-${t.status}">${t.status.replace(/_/g, ' ')}</span>
+          </div>
+        `).join('');
+
+        if (selectedTaskId) {
+          renderSelectedTask(tasks.find(t => t.id === selectedTaskId));
+        } else if (tasks.length > 0) {
+          selectTask(tasks[0].id);
+        }
+      } catch (e) {
+        console.warn('Failed to fetch Hephaestus tasks:', e);
+      }
+    }
+
+    function selectTask(taskId) {
+      selectedTaskId = taskId;
+      const task = tasksCache.find(t => t.id === taskId);
+      renderSelectedTask(task);
+      updateHephaestusFeed();
+    }
+
+    function renderSelectedTask(task) {
+      if (!task) return;
+
+      const statusPill = document.getElementById('selected-task-status');
+      statusPill.className = `status-pill status-${task.status}`;
+      statusPill.textContent = task.status.replace(/_/g, ' ');
+
+      document.getElementById('task-details-header').innerHTML = `
+        <strong>${escapeHtml(task.title)}</strong><br>
+        <span style="font-size:0.75rem;">Created: ${new Date(task.createdAt).toLocaleTimeString()} | Target: ${task.targetFiles.join(', ') || 'Auto'}</span>
+      `;
+
+      // Render Diff
+      const diffContainer = document.getElementById('diff-viewer');
+      if (task.stagedChanges && task.stagedChanges.length > 0) {
+        let diffHtml = '';
+        for (const change of task.stagedChanges) {
+          diffHtml += `<div class="diff-line hdr">--- File: ${escapeHtml(change.relativePath || change.filePath)} (+${change.additions}/-${change.deletions}) ---</div>`;
+          const lines = (change.patch || '').split('\n');
+          for (const line of lines) {
+            let cls = '';
+            if (line.startsWith('+') && !line.startsWith('+++')) cls = 'add';
+            else if (line.startsWith('-') && !line.startsWith('---')) cls = 'del';
+            else if (line.startsWith('---') || line.startsWith('+++') || line.startsWith('@@')) cls = 'hdr';
+            diffHtml += `<div class="diff-line ${cls}">${escapeHtml(line)}</div>`;
+          }
+        }
+        diffContainer.innerHTML = diffHtml;
+      } else {
+        diffContainer.innerHTML = `<div class="diff-line hdr">// No file modifications staged for this task yet.</div>`;
+      }
+
+      // Render AI Review Card
+      const judgeBox = document.getElementById('judge-details');
+      if (task.aiReview) {
+        judgeBox.style.display = 'flex';
+        document.getElementById('judge-provider').textContent = `AI Judge (${task.aiReview.provider.toUpperCase()} / ${task.aiReview.model || ''}): ${task.aiReview.verdict}`;
+        document.getElementById('judge-score').textContent = `Quality Score: ${task.aiReview.score}/100`;
+        document.getElementById('judge-summary').textContent = task.aiReview.summary || '';
+        document.getElementById('judge-critique').textContent = task.aiReview.critique || '';
+        
+        const scoreColor = task.aiReview.score >= 80 ? 'var(--diff-add)' : task.aiReview.score >= 50 ? 'var(--heph-amber)' : 'var(--diff-del)';
+        document.getElementById('judge-score').style.color = scoreColor;
+      } else {
+        judgeBox.style.display = 'none';
+      }
+
+      // Render Logs
+      const logsEl = document.getElementById('heph-logs');
+      if (task.logs && task.logs.length > 0) {
+        logsEl.textContent = task.logs.map(l => `[${new Date(l.timestamp).toLocaleTimeString()}] [${l.level.toUpperCase()}] ${l.message}`).join('\n');
+        logsEl.scrollTop = logsEl.scrollHeight;
+      } else {
+        logsEl.textContent = 'No logs recorded.';
+      }
+
+      // Actions
+      const controls = document.getElementById('task-action-controls');
+      const rollbackBtn = document.getElementById('btn-rollback');
+      controls.style.display = 'flex';
+
+      if (task.status === 'deployed') {
+        rollbackBtn.style.display = 'inline-flex';
+      } else {
+        rollbackBtn.style.display = 'none';
+      }
+    }
+
+    async function approveCurrentTask() {
+      if (!selectedTaskId) return;
+      if (!confirm(`Deploy changes for task ${selectedTaskId} directly to production codebase?`)) return;
+      try {
+        const res = await fetch(`/api/hephaestus/tasks/${selectedTaskId}/approve`, { method: 'POST' }).then(r => r.json());
+        if (res.success) {
+          alert('Deployment succeeded! Rollback snapshot captured.');
+          updateHephaestusFeed();
+          updateTrainingFlywheelStats();
+        } else {
+          alert('Deployment failed: ' + (res.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Error deploying task: ' + e.message);
+      }
+    }
+
+    async function rejectCurrentTask() {
+      if (!selectedTaskId) return;
+      const reason = prompt('Reason for rejection:', 'Operator rejected draft');
+      if (!reason) return;
+      try {
+        await fetch(`/api/hephaestus/tasks/${selectedTaskId}/reject`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason })
+        });
+        updateHephaestusFeed();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function rollbackCurrentTask() {
+      if (!selectedTaskId) return;
+      if (!confirm(`Trigger EMERGENCY ROLLBACK for task ${selectedTaskId}? This will restore the pre-deployment files.`)) return;
+      try {
+        const res = await fetch(`/api/hephaestus/tasks/${selectedTaskId}/rollback`, { method: 'POST' }).then(r => r.json());
+        if (res.success) {
+          alert('Rollback succeeded! Files restored to prior state.');
+          updateHephaestusFeed();
+        } else {
+          alert('Rollback failed: ' + (res.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function runVisionAnalysis() {
+      const el = document.getElementById('vision-output');
+      el.textContent = 'HEPHAESTUS/Aloy analyzing live visual screen buffer...';
+      try {
+        const res = await fetch('/api/vision').then(r => r.json());
+        el.textContent = JSON.stringify(res, null, 2);
+      } catch (e) {
+        el.textContent = 'Vision inspection failed: ' + e.message;
+      }
+    }
+
+    function openNewTaskModal() {
+      document.getElementById('task-modal').classList.add('active');
+    }
+
+    function closeNewTaskModal() {
+      document.getElementById('task-modal').classList.remove('active');
+    }
+
+    async function submitNewTask() {
+      const title = document.getElementById('modal-title').value.trim();
+      const category = document.getElementById('modal-category').value;
+      const description = document.getElementById('modal-desc').value.trim();
+      const filesRaw = document.getElementById('modal-files').value.trim();
+      const targetFiles = filesRaw ? filesRaw.split(',').map(s => s.trim()) : [];
+
+      if (!title) {
+        alert('Please enter a task title');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/hephaestus/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, category, description, targetFiles, requestedBy: 'operator' })
+        }).then(r => r.json());
+
+        closeNewTaskModal();
+        document.getElementById('modal-title').value = '';
+        document.getElementById('modal-desc').value = '';
+        document.getElementById('modal-files').value = '';
+
+        selectedTaskId = res.id;
+        updateHephaestusFeed();
+        updateTrainingFlywheelStats();
+      } catch (e) {
+        alert('Failed to dispatch task: ' + e.message);
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // Polling loops
+    setInterval(updateAloyRuntime, 2500);
+    setInterval(updateHephaestusFeed, 2500);
+    setInterval(updateTrainingFlywheelStats, 5000);
+
+    updateAloyRuntime();
+    updateHephaestusFeed();
+    updateTrainingFlywheelStats();
+  </script>
+</body>
+</html>

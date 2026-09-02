@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Aloy Reminders</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Public+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            bg: "#10141f",
+                            surface: "#171d2c",
+                            accent: "#00f2fe",
+                            onAccent: "#07090e",
+                            text: "#f1f5f9",
+                            muted: "#94a3b8",
+                            dimmed: "#64748b",
+                            danger: "#ff4d4d"
+                        }
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        headline: ["Inter", "sans-serif"],
+                        display: ["Inter", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                        label: ["Public Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(23, 29, 44, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .reminder-checkbox:checked {
+            background-color: #00f2fe;
+            border-color: #00f2fe;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #171d2c;
+            border-radius: 10px;
+        }
+        @keyframes slide-up {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .animate-slide-up {
+            animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-[#10141f] text-[#f1f5f9] font-body min-h-screen overflow-hidden">
+<!-- Top App Bar (Shared Component Strategy) -->
+<header class="fixed top-0 z-50 w-full h-16 bg-[#10141f] border-b border-[#00f2fe]/10 flex justify-between items-center px-4">
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-[#171d2c] transition-colors rounded-full active:opacity-80">
+<span class="material-symbols-outlined text-[#00f2fe]">arrow_back</span>
+</button>
+<h1 class="text-xl font-bold text-[#00f2fe] tracking-tight font-headline">Reminders</h1>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 hover:bg-[#171d2c] transition-colors rounded-full active:opacity-80">
+<span class="material-symbols-outlined text-[#f1f5f9]">add</span>
+</button>
+<button class="p-2 hover:bg-[#171d2c] transition-colors rounded-full active:opacity-80">
+<span class="material-symbols-outlined text-[#f1f5f9]">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-20 pb-32 px-4 max-w-2xl mx-auto h-screen overflow-y-auto custom-scrollbar">
+<!-- Reminder List Container -->
+<div class="space-y-3">
+<!-- Overdue Reminder Card -->
+<div class="bg-[#171d2c] border border-[#ff4d4d]/20 rounded-xl p-4 flex items-start gap-4 transition-all hover:border-[#ff4d4d]/40 group">
+<div class="mt-1">
+<input class="w-6 h-6 rounded-full border-2 border-[#94a3b8] bg-transparent text-[#00f2fe] focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer" type="checkbox"/>
+</div>
+<div class="flex-1">
+<h3 class="text-lg font-medium text-[#f1f5f9]">Test the Aloy Android backend</h3>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="material-symbols-outlined text-[#ff4d4d] text-sm" style="font-variation-settings: 'FILL' 1;">error</span>
+<p class="text-sm font-label font-medium text-[#ff4d4d]">Due Jul 31, 9:00 AM</p>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-[#94a3b8] hover:text-[#f1f5f9]">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Upcoming Reminder Card -->
+<div class="bg-[#171d2c] border border-[#00f2fe]/5 rounded-xl p-4 flex items-start gap-4 transition-all hover:border-[#00f2fe]/20 group">
+<div class="mt-1">
+<input class="w-6 h-6 rounded-full border-2 border-[#94a3b8] bg-transparent text-[#00f2fe] focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer" type="checkbox"/>
+</div>
+<div class="flex-1">
+<h3 class="text-lg font-medium text-[#f1f5f9]">Review UI feedback</h3>
+<div class="flex items-center gap-1.5 mt-1 text-[#94a3b8]">
+<span class="material-symbols-outlined text-sm">calendar_today</span>
+<p class="text-sm font-label font-medium uppercase tracking-wider">Due Aug 15, 2:00 PM</p>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-[#94a3b8] hover:text-[#f1f5f9]">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Section Label -->
+<div class="pt-6 pb-2">
+<h2 class="text-xs font-bold uppercase tracking-widest text-[#64748b] px-1">Completed</h2>
+</div>
+<!-- Completed Reminder Card -->
+<div class="bg-[#171d2c]/50 border border-transparent rounded-xl p-4 flex items-start gap-4 opacity-60">
+<div class="mt-1">
+<div class="w-6 h-6 rounded-full bg-[#00f2fe] flex items-center justify-center">
+<span class="material-symbols-outlined text-[#07090e] text-sm font-bold">check</span>
+</div>
+</div>
+<div class="flex-1">
+<h3 class="text-lg font-medium text-[#94a3b8] line-through">Initial project setup</h3>
+<div class="flex items-center gap-1.5 mt-1 text-[#64748b]">
+<span class="material-symbols-outlined text-sm">task_alt</span>
+<p class="text-sm font-label">Completed Jul 20</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Decorative Subtle Background Element -->
+<div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 opacity-5 pointer-events-none">
+<span class="material-symbols-outlined text-[400px] text-[#00f2fe]">notification_important</span>
+</div>
+</main>
+<!-- FAB (Contextual Priority) -->
+<button class="fixed right-6 bottom-32 w-14 h-14 bg-[#00f2fe] text-[#07090e] rounded-full shadow-lg shadow-[#00f2fe]/20 flex items-center justify-center z-40 active:scale-95 transition-transform">
+<span class="material-symbols-outlined font-bold text-2xl">add</span>
+</button>
+<!-- Bottom Sheet (Initially Half-Open State) -->
+<div class="fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center" id="bottomSheet">
+<!-- Backdrop -->
+<div class="fixed inset-0 bg-black/40 backdrop-blur-sm -z-10"></div>
+<!-- Sheet Content -->
+<div class="w-full max-w-2xl bg-[#171d2c] border-t border-[#00f2fe]/20 rounded-t-3xl shadow-2xl animate-slide-up h-[397px] flex flex-col">
+<!-- Handle -->
+<div class="w-12 h-1.5 bg-[#64748b]/30 rounded-full mx-auto my-4 cursor-grab"></div>
+<div class="px-6 flex-1 flex flex-col">
+<h2 class="text-xl font-bold mb-6 font-headline">New Reminder</h2>
+<div class="space-y-6">
+<!-- Text Input -->
+<div class="relative group">
+<input class="w-full bg-[#10141f] border-0 border-b-2 border-[#64748b]/30 text-[#f1f5f9] placeholder:text-[#64748b] focus:ring-0 focus:border-[#00f2fe] transition-colors py-3 text-lg font-medium" placeholder="What do you want to be reminded about?" type="text"/>
+<div class="absolute right-0 top-1/2 -translate-y-1/2 flex gap-2">
+<span class="material-symbols-outlined text-[#94a3b8] cursor-pointer hover:text-[#00f2fe]">mic</span>
+</div>
+</div>
+<!-- Picker Placeholders -->
+<div class="flex gap-3">
+<button class="flex-1 bg-[#10141f] p-4 rounded-xl border border-[#64748b]/20 flex items-center gap-3 hover:border-[#00f2fe]/40 transition-colors">
+<span class="material-symbols-outlined text-[#00f2fe]">calendar_today</span>
+<div class="text-left">
+<span class="block text-[10px] uppercase tracking-tighter text-[#64748b]">Set Date</span>
+<span class="text-sm font-medium">Today</span>
+</div>
+</button>
+<button class="flex-1 bg-[#10141f] p-4 rounded-xl border border-[#64748b]/20 flex items-center gap-3 hover:border-[#00f2fe]/40 transition-colors">
+<span class="material-symbols-outlined text-[#00f2fe]">schedule</span>
+<div class="text-left">
+<span class="block text-[10px] uppercase tracking-tighter text-[#64748b]">Set Time</span>
+<span class="text-sm font-medium">9:00 PM</span>
+</div>
+</button>
+</div>
+</div>
+<!-- Action Button -->
+<div class="mt-auto mb-8">
+<button class="w-full bg-[#00f2fe] text-[#07090e] font-bold py-4 rounded-xl transition-all active:scale-[0.98] hover:shadow-lg hover:shadow-[#00f2fe]/20">
+                        Create Reminder
+                    </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Nav Bar (Shared Component Implementation) -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center h-16 px-6 bg-[#10141f] border-t border-[#00f2fe]/10">
+<button class="flex flex-col items-center justify-center text-[#64748b] p-2 hover:text-[#00f2fe] active:scale-95 transition-all">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-label uppercase tracking-wider mt-0.5">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center text-[#64748b] p-2 hover:text-[#00f2fe] active:scale-95 transition-all">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="text-[10px] font-label uppercase tracking-wider mt-0.5">Chat</span>
+</button>
+<button class="flex flex-col items-center justify-center text-[#00f2fe] p-2 scale-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="text-[10px] font-label uppercase tracking-wider mt-0.5">Reminders</span>
+</button>
+<button class="flex flex-col items-center justify-center text-[#64748b] p-2 hover:text-[#00f2fe] active:scale-95 transition-all">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-label uppercase tracking-wider mt-0.5">Settings</span>
+</button>
+</nav>
+<script>
+        // Simple Micro-interaction for bottom sheet backdrop closing
+        document.querySelector('.fixed.inset-0.bg-black\\/40').addEventListener('click', function() {
+            const sheet = document.getElementById('bottomSheet');
+            sheet.style.transform = 'translateY(100%)';
+            sheet.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+            setTimeout(() => {
+                sheet.style.display = 'none';
+            }, 400);
+        });
+
+        // Toggle checkboxes
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                const card = this.closest('.bg-\\[\\#171d2c\\]');
+                if(this.checked) {
+                    card.style.opacity = '0.5';
+                    card.querySelector('h3').classList.add('line-through');
+                } else {
+                    card.style.opacity = '1';
+                    card.querySelector('h3').classList.remove('line-through');
+                }
+            });
+        });
+    </script>
+</body></html>

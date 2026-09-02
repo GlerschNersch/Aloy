@@ -1,0 +1,7 @@
+{
+  "total_deaths": 12,
+  "last_death_x": null,
+  "learning_summary": "Coordinate invalidated: prior value (X=0) was a sentinel/uninitialized read and was discarded. Death count reconciled to match aloy_smb2_master_progress.json.",
+  "death_history_count": 12,
+  "canonical_store": "aloy_memory.json"
+}
