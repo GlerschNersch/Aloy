@@ -2074,7 +2074,16 @@ export const TOOLS = [
   {
     name: 'apollo_curate_document',
     requiresConfirmation: true,
-    confirmLabel: (args) => `Curate and index document "${args.title}" into Apollo's knowledge bank?`,
+    // Previously showed only the title — the one Apollo action where the
+    // actual body (often summarized/pulled from a webpage or PDF the model
+    // just read) becomes persistent "knowledge bank" memory, so a preview
+    // of what's actually being stored matters more here than for any other
+    // confirmation in this file, not less.
+    confirmLabel: (args) => {
+      const preview = (args.raw_content || '').trim().slice(0, 160);
+      const ellipsis = (args.raw_content || '').trim().length > 160 ? '…' : '';
+      return `Curate and index document "${args.title}" into Apollo's knowledge bank?\n\n"${preview}${ellipsis}"`;
+    },
     definition: {
       type: 'function',
       function: {

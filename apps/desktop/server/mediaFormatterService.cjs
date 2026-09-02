@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const VIDEO_EXTENSIONS = new Set(['.mp4', '.mkv', '.avi', '.m4v', '.mov', '.wmv', '.iso']);
+const VIDEO_EXTENSIONS = new Set(['.mp4', '.mkv', '.avi', '.m4v', '.mov', '.wmv', '.iso', '.mpg', '.mpeg', '.ts', '.m2ts']);
 const SUBTITLE_EXTENSIONS = new Set(['.srt', '.sub', '.idx', '.vtt', '.ass', '.ssa']);
 const JUNK_FILE_PATTERNS = [
   /Downloaded from/i,
@@ -18,13 +18,16 @@ const JUNK_FILE_PATTERNS = [
   /\.nfo$/i,
   /\.txt$/i,
   /Thumbs\.db$/i,
-  /\.DS_Store$/i
+  /\.DS_Store$/i,
+  /\s+\d+\.png$/i
 ];
 
 const JUNK_DIR_PATTERNS = [
   /Cartoons YOU'd Like/i,
   /FANTASY-Adventure Movies/i,
-  /Sample/i
+  /Sample/i,
+  /Cover-Screens/i,
+  /^Images$/i
 ];
 
 function sleep(ms) {
@@ -180,12 +183,15 @@ class MediaFormatterService {
                   report.movies.issues.push({ type: 'MOVIE_FILE_MISSING_YEAR', path: fPath, message: `Movie file missing year: "${f}"` });
                 }
 
-                if (base !== entry) {
+                const baseWithoutEdition = base.replace(/\s*(\[[^\]]+\]|\{[^}]+\})\s*$/, '').trim();
+                const entryWithoutEdition = entry.replace(/\s*(\[[^\]]+\]|\{[^}]+\})\s*$/, '').trim();
+
+                if (base !== entry && baseWithoutEdition.toLowerCase() !== entryWithoutEdition.toLowerCase()) {
                   report.movies.issues.push({ type: 'NAME_MISMATCH', path: fPath, message: `File name "${f}" does not match folder "${entry}"` });
                 }
               } else if (SUBTITLE_EXTENSIONS.has(ext)) {
                 report.movies.totalSubtitles++;
-              } else if (fs.statSync(fPath).isDirectory() && f === 'Subs') {
+              } else if (fs.statSync(fPath).isDirectory() && (f === 'Subs' || f.toLowerCase() === 'subtitles')) {
                 // Standard subtitles directory, allowed
               } else {
                 report.movies.issues.push({ type: 'NON_VIDEO_FILE', path: fPath, message: `Extra/Junk file in movie folder: "${f}"` });
@@ -342,7 +348,9 @@ class MediaFormatterService {
                 const base = path.basename(f, ext);
 
                 if (VIDEO_EXTENSIONS.has(ext)) {
-                  const targetFileName = `${cleanMovieDir}${ext}`;
+                  const editionMatch = base.match(/(\[[^\]]+\]|\{[^}]+\})\s*$/);
+                  const editionSuffix = editionMatch ? ` ${editionMatch[1]}` : '';
+                  const targetFileName = `${cleanMovieDir}${editionSuffix}${ext}`;
                   if (f !== targetFileName) {
                     const newFilePath = path.join(moviePath, targetFileName);
                     actions.push({ action: 'RENAME_MOVIE_FILE', from: fPath, to: newFilePath });

@@ -376,7 +376,11 @@ const MessageRow = React.memo(function MessageRow({
                         }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.85rem', color: '#f1f5f9' }}>
                             <Wrench size={14} color="#c084fc" style={{ flexShrink: 0, marginTop: '2px' }} />
-                            <span>{label}</span>
+                            {/* pre-wrap: a plain span collapses newlines, silently
+                                flattening any multi-line confirmLabel (e.g.
+                                apollo_curate_document's title + content preview)
+                                into one run-on line with no visible separation. */}
+                            <span style={{ whiteSpace: 'pre-wrap' }}>{label}</span>
                           </div>
                           {call.status === 'pending' ? (
                             <div style={{ display: 'flex', gap: '0.5rem' }}>

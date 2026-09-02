@@ -1,7 +1,7 @@
 /**
  * 4-Asset Memory & LLM-Wiki Hub for Apollo.
  * Inspired by TencentDB-Agent-Memory & OpenViking.
- * 
+ *
  * 4 Reusable Memory Assets:
  * 1. Chat Memory (Episodic conversational recall & facts)
  * 2. Skills Registry (Learned procedural tools & macros)
@@ -14,20 +14,46 @@ const path = require('path');
 const os = require('os');
 const { logAuditEvent } = require('./auditLogger.cjs');
 
-const WIKI_DIR = path.join(os.homedir(), '.aloy-server', 'vault', 'wiki');
-const CODE_GRAPH_FILE = path.join(os.homedir(), '.aloy-server', 'vault', 'code_graph.json');
+const DEFAULT_WIKI_DIR = path.join(os.homedir(), '.aloy-server', 'vault', 'wiki');
+const DEFAULT_CODE_GRAPH_FILE = path.join(os.homedir(), '.aloy-server', 'vault', 'code_graph.json');
 
-function ensureDirectories() {
-  if (!fs.existsSync(WIKI_DIR)) {
-    fs.mkdirSync(WIKI_DIR, { recursive: true });
-  }
+// Wiki slugs reach this module straight from an Express route param
+// (GET/POST /api/apollo/wiki/:slug) with nothing in between validating them.
+// `path.join(wikiDir, slug + '.md')` does NOT stop '..' segments from
+// escaping wikiDir — a slug like '../../../../some/other/file' resolves
+// outside it, giving arbitrary-file read (getWikiPage) and write
+// (saveWikiPage) to anyone holding the server's bearer token. Fixed two
+// ways, deliberately redundant: an allow-list on the slug's shape (so a
+// legitimate slug never even needs to think about traversal), AND a
+// resolved-path containment check (so a mistake in the allow-list, or a
+// future caller that bypasses it, still can't escape wikiDir).
+const SAFE_SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/i;
+
+function resolveWikiPath(wikiDir, slug) {
+  if (typeof slug !== 'string' || !SAFE_SLUG_RE.test(slug)) return null;
+  const filePath = path.join(wikiDir, `${slug}.md`);
+  const resolved = path.resolve(filePath);
+  const base = path.resolve(wikiDir) + path.sep;
+  if (!resolved.startsWith(base)) return null; // defense in depth
+  return filePath;
 }
 
 class ApolloMemoryHub {
-  constructor() {
-    ensureDirectories();
+  // customWikiDir/customCodeGraphFile let tests point this at a temp
+  // sandbox instead of the real ~/.aloy-server/vault — mirrors the same
+  // constructor-injection pattern ApolloEngine uses for its tasks file.
+  constructor(customWikiDir = null, customCodeGraphFile = null) {
+    this.wikiDir = customWikiDir || DEFAULT_WIKI_DIR;
+    this.codeGraphFile = customCodeGraphFile || DEFAULT_CODE_GRAPH_FILE;
+    this.ensureDirectories();
     this.initializeDefaultWiki();
     this.initializeDefaultCodeGraph();
+  }
+
+  ensureDirectories() {
+    if (!fs.existsSync(this.wikiDir)) {
+      fs.mkdirSync(this.wikiDir, { recursive: true });
+    }
   }
 
   initializeDefaultWiki() {
@@ -53,7 +79,7 @@ class ApolloMemoryHub {
     ];
 
     for (const p of defaultPages) {
-      const pagePath = path.join(WIKI_DIR, `${p.slug}.md`);
+      const pagePath = path.join(this.wikiDir, `${p.slug}.md`);
       if (!fs.existsSync(pagePath)) {
         fs.writeFileSync(pagePath, p.content, 'utf8');
       }
@@ -61,7 +87,7 @@ class ApolloMemoryHub {
   }
 
   initializeDefaultCodeGraph() {
-    if (!fs.existsSync(CODE_GRAPH_FILE)) {
+    if (!fs.existsSync(this.codeGraphFile)) {
       const initialGraph = {
         name: 'Aloy Monorepo',
         root: path.resolve(__dirname, '../../..'),
@@ -73,17 +99,17 @@ class ApolloMemoryHub {
         ],
         updatedAt: new Date().toISOString()
       };
-      fs.writeFileSync(CODE_GRAPH_FILE, JSON.stringify(initialGraph, null, 2), 'utf8');
+      fs.writeFileSync(this.codeGraphFile, JSON.stringify(initialGraph, null, 2), 'utf8');
     }
   }
 
   // --- ASSET 3: LLM-WIKI ---
   getWikiPages() {
-    ensureDirectories();
-    const files = fs.readdirSync(WIKI_DIR).filter(f => f.endsWith('.md'));
+    this.ensureDirectories();
+    const files = fs.readdirSync(this.wikiDir).filter(f => f.endsWith('.md'));
     return files.map(file => {
       const slug = file.replace('.md', '');
-      const content = fs.readFileSync(path.join(WIKI_DIR, file), 'utf8');
+      const content = fs.readFileSync(path.join(this.wikiDir, file), 'utf8');
       const firstLine = content.split('\n')[0] || slug;
       const title = firstLine.replace(/^#+\s*/, '').trim();
       return { slug, title, content };
@@ -91,33 +117,50 @@ class ApolloMemoryHub {
   }
 
   getWikiPage(slug) {
-    ensureDirectories();
-    const filePath = path.join(WIKI_DIR, `${slug}.md`);
+    this.ensureDirectories();
+    const filePath = resolveWikiPath(this.wikiDir, slug);
+    if (!filePath) return null; // invalid slug — same as "not found" to callers
     if (!fs.existsSync(filePath)) return null;
     return fs.readFileSync(filePath, 'utf8');
   }
 
   saveWikiPage(slug, title, markdownContent) {
-    ensureDirectories();
-    const filePath = path.join(WIKI_DIR, `${slug}.md`);
+    this.ensureDirectories();
+    const filePath = resolveWikiPath(this.wikiDir, slug);
+    if (!filePath) {
+      logAuditEvent({
+        category: 'security', action: 'apollo_wiki_slug_rejected', status: 'denied',
+        target: String(slug), details: 'Wiki slug failed validation (invalid shape or path escaped wikiDir).'
+      });
+      return { success: false, error: 'Invalid wiki slug — use letters, numbers, and hyphens only.' };
+    }
     fs.writeFileSync(filePath, markdownContent, 'utf8');
-    logAuditEvent('apollo_wiki_saved', { slug, title, length: markdownContent.length });
+    logAuditEvent({
+      category: 'system', action: 'apollo_wiki_saved', target: slug,
+      payload: { title, length: markdownContent.length }
+    });
     return { success: true, slug, filePath };
   }
 
   // --- ASSET 4: CODE GRAPH ---
   getCodeGraph() {
-    if (!fs.existsSync(CODE_GRAPH_FILE)) this.initializeDefaultCodeGraph();
+    if (!fs.existsSync(this.codeGraphFile)) this.initializeDefaultCodeGraph();
     try {
-      return JSON.parse(fs.readFileSync(CODE_GRAPH_FILE, 'utf8'));
+      return JSON.parse(fs.readFileSync(this.codeGraphFile, 'utf8'));
     } catch {
       return { error: 'Failed to parse code graph' };
     }
   }
 
   updateCodeGraph(graphData) {
-    fs.writeFileSync(CODE_GRAPH_FILE, JSON.stringify(graphData, null, 2), 'utf8');
-    logAuditEvent('apollo_code_graph_updated', { services: graphData.services?.length || 0 });
+    if (!graphData || typeof graphData !== 'object' || Array.isArray(graphData)) {
+      return { success: false, error: 'graphData must be a JSON object' };
+    }
+    fs.writeFileSync(this.codeGraphFile, JSON.stringify(graphData, null, 2), 'utf8');
+    logAuditEvent({
+      category: 'system', action: 'apollo_code_graph_updated',
+      payload: { services: graphData.services?.length || 0 }
+    });
     return { success: true };
   }
 
@@ -125,7 +168,7 @@ class ApolloMemoryHub {
   getHubOverview() {
     const wikiPages = this.getWikiPages();
     const codeGraph = this.getCodeGraph();
-    
+
     return {
       assets: {
         chatMemory: { status: 'active', engine: 'apolloMemoryEngine.cjs' },

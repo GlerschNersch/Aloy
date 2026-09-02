@@ -2194,10 +2194,16 @@ In conversation, be attentive and curiously inquiring — when natural and relev
   app.post('/api/apollo/wiki/:slug', (req, res) => {
     const { title, content } = req.body || {};
     if (!content) return res.status(400).json({ error: 'Content required' });
-    res.json(globalMemoryHub.saveWikiPage(req.params.slug, title || req.params.slug, content));
+    const result = globalMemoryHub.saveWikiPage(req.params.slug, title || req.params.slug, content);
+    if (result.success === false) return res.status(400).json(result);
+    res.json(result);
   });
   app.get('/api/apollo/code-graph', (_req, res) => res.json(globalMemoryHub.getCodeGraph()));
-  app.post('/api/apollo/code-graph', (req, res) => res.json(globalMemoryHub.updateCodeGraph(req.body)));
+  app.post('/api/apollo/code-graph', (req, res) => {
+    const result = globalMemoryHub.updateCodeGraph(req.body);
+    if (result.success === false) return res.status(400).json(result);
+    res.json(result);
+  });
 
   // Token Compressor & Quota Fallback Endpoints
   app.post('/api/token-compressor/compress', (req, res) => {

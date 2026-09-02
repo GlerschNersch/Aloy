@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ApolloEngine, APOLLO_STATUS } from './apollo.cjs';
+import { ApolloMemoryHub } from './apolloMemoryHub.cjs';
 import { syncToVault } from './vaultSync.cjs';
 import fs from 'fs';
 import os from 'os';
@@ -19,16 +20,20 @@ function createMockStore(initialData = {}) {
   };
 }
 
-describe('APOLLO (VAULT) — Autonomous Knowledge & Memory Engine (20 Tests)', () => {
+describe('APOLLO (VAULT) — Autonomous Knowledge & Memory Engine (19 Tests)', () => {
   let engine;
   let testTempDir;
   let testTasksFile;
+  let testWikiDir;
+  let testCodeGraphFile;
   let mockStore;
 
   beforeEach(() => {
     testTempDir = path.join(os.tmpdir(), `apollo_suite_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`);
     fs.mkdirSync(testTempDir, { recursive: true });
     testTasksFile = path.join(testTempDir, 'apollo-tasks.json');
+    testWikiDir = path.join(testTempDir, 'wiki');
+    testCodeGraphFile = path.join(testTempDir, 'code_graph.json');
     mockStore = createMockStore();
     engine = new ApolloEngine(testTasksFile, mockStore);
   });
@@ -167,49 +172,54 @@ describe('APOLLO (VAULT) — Autonomous Knowledge & Memory Engine (20 Tests)', (
     expect(raw.learnedKnowledge).toBeUndefined();
   });
 
-  // 10. Knowledge retrieval by keyword
-  it('10. retrieves knowledge by semantic keyword query', () => {
-    mockStore = createMockStore({
-      curatedDocuments: [
-        { id: 'doc-1', title: 'Kubernetes Guide', summary: 'Container orchestration platform', entities: ['K8s', 'Pod'] },
-        { id: 'doc-2', title: 'PostgreSQL Internals', summary: 'Relational database engine MVCC', entities: ['SQL', 'MVCC'] }
-      ]
-    });
-    engine = new ApolloEngine(testTasksFile, mockStore);
+  // Former tests 10 and 11 ("retrieves knowledge by semantic keyword query",
+  // "formats markdown file for Obsidian vault sync with yaml frontmatter")
+  // were removed in the 2026-09-02 Apollo audit: neither called any real
+  // Apollo/vaultSync code — they asserted properties of logic written
+  // inline in the test itself (a hand-built .filter(), a hand-built
+  // template literal), for methods that don't exist on ApolloEngine or
+  // exports vaultSync.cjs doesn't have. They were passing regardless of
+  // what the real implementation did, which is worse than no test — add
+  // them back for real once semantic retrieval and standalone note
+  // formatting actually exist as methods to call.
 
-    const hits = mockStore.getRaw().curatedDocuments.filter(d =>
-      d.title.toLowerCase().includes('kubernetes') || d.summary.toLowerCase().includes('orchestration')
-    );
-    expect(hits.length).toBe(1);
-    expect(hits[0].id).toBe('doc-1');
+  // 10. Wiki Hub — legitimate slugs work
+  it('10. saves and retrieves a wiki page by a well-formed slug', () => {
+    const wikiHub = new ApolloMemoryHub(testWikiDir, testCodeGraphFile);
+    const result = wikiHub.saveWikiPage('kubernetes-guide', 'Kubernetes Guide', '# Kubernetes Guide\n\nContainer orchestration platform.');
+    expect(result.success).toBe(true);
+    expect(wikiHub.getWikiPage('kubernetes-guide')).toContain('Container orchestration platform.');
   });
 
-  // 11. Obsidian vault sync markdown formatting
-  it('11. formats markdown file for Obsidian vault sync with yaml frontmatter', () => {
-    const note = {
-      title: 'State of React 2026',
-      content: 'React 19 Server Components and Actions.',
-      tags: ['react', 'frontend', 'javascript']
-    };
+  // 11. Wiki Hub — path traversal is actually rejected (the 2026-09-02 audit
+  // finding: slug reached path.join() with zero validation, giving
+  // arbitrary-file read/write to anyone holding the server's bearer token).
+  // This replaces the old #12, which asserted a hardcoded string list and
+  // never called the vulnerable function at all.
+  it('11. rejects directory-traversal slugs on both read and write, and never writes outside wikiDir', () => {
+    const wikiHub = new ApolloMemoryHub(testWikiDir, testCodeGraphFile);
+    const outsideTarget = path.join(testTempDir, 'escaped.md');
+    const maliciousSlugs = [
+      '../escaped', '../../escaped', '..\\..\\escaped',
+      '../../../../../../etc/passwd', 'a/../../escaped'
+    ];
 
-    const md = `---\ntitle: "${note.title}"\ntags: [${note.tags.join(', ')}]\ndate: "${new Date().toISOString()}"\n---\n\n# ${note.title}\n\n${note.content}\n`;
-    expect(md).toContain('---');
-    expect(md).toContain('title: "State of React 2026"');
-    expect(md).toContain('tags: [react, frontend, javascript]');
-    expect(md).toContain('# State of React 2026');
-  });
+    for (const slug of maliciousSlugs) {
+      const writeResult = wikiHub.saveWikiPage(slug, 'Malicious', 'attacker-controlled content');
+      expect(writeResult.success).toBe(false);
+      expect(fs.existsSync(outsideTarget)).toBe(false);
 
-  // 12. Path traversal security check in vault sync
-  it('12. validates Obsidian vault file paths preventing directory traversal', () => {
-    const maliciousPaths = ['../../secret.txt', '..\\..\\windows\\system32', '/etc/passwd'];
-    for (const p of maliciousPaths) {
-      const isSafe = !p.includes('..') && !path.isAbsolute(p);
-      expect(isSafe).toBe(false);
+      expect(wikiHub.getWikiPage(slug)).toBeNull();
     }
+
+    // An absolute path used as a "slug" must also be rejected, not just
+    // relative traversal — resolveWikiPath's allow-list catches this too.
+    const absoluteSlug = process.platform === 'win32' ? 'C:\\Windows\\win.ini' : '/etc/passwd';
+    expect(wikiHub.saveWikiPage(absoluteSlug, 'x', 'y').success).toBe(false);
   });
 
-  // 13. Atomic file writing
-  it('13. executes safe atomic temporary file write and rename for tasks storage', () => {
+  // 12. Atomic file writing
+  it('12. executes safe atomic temporary file write and rename for tasks storage', () => {
     const sampleTasks = [{ id: 'apollo-t1', title: 'Atomic test', status: APOLLO_STATUS.COMPLETED }];
     engine.saveTasks(sampleTasks);
 
@@ -218,23 +228,23 @@ describe('APOLLO (VAULT) — Autonomous Knowledge & Memory Engine (20 Tests)', (
     expect(loaded[0].title).toBe('Atomic test');
   });
 
-  // 14. Corrupt file auto-recovery
-  it('14. recovers gracefully from corrupted tasks storage file returning empty array', () => {
+  // 13. Corrupt file auto-recovery
+  it('13. recovers gracefully from corrupted tasks storage file returning empty array', () => {
     fs.writeFileSync(testTasksFile, '{ corrupt json invalid', 'utf8');
     const tasks = engine.loadTasks();
     expect(Array.isArray(tasks)).toBe(true);
     expect(tasks.length).toBe(0);
   });
 
-  // 15. Task lookup by ID
-  it('15. retrieves task by ID and returns null for non-existent ID', async () => {
+  // 14. Task lookup by ID
+  it('14. retrieves task by ID and returns null for non-existent ID', async () => {
     const created = await engine.createDocumentTask({ title: 'Lookup Task', rawContent: 'Content' });
     expect(engine.getTask(created.id)).toBeDefined();
     expect(engine.getTask('non-existent-apollo-id')).toBeNull();
   });
 
-  // 16. Full task enumeration
-  it('16. enumerates all tasks ordered by creation timestamp', async () => {
+  // 15. Full task enumeration
+  it('15. enumerates all tasks ordered by creation timestamp', async () => {
     const t1 = await engine.createDocumentTask({ title: 'Doc 1', rawContent: 'C1' });
     const t2 = await engine.createDocumentTask({ title: 'Doc 2', rawContent: 'C2' });
 
@@ -244,8 +254,8 @@ describe('APOLLO (VAULT) — Autonomous Knowledge & Memory Engine (20 Tests)', (
     expect(list.map(t => t.id)).toContain(t2.id);
   });
 
-  // 17. Task deletion
-  it('17. deletes task and updates persisted storage file', async () => {
+  // 16. Task deletion
+  it('16. deletes task and updates persisted storage file', async () => {
     const task = await engine.createDocumentTask({ title: 'Delete me', rawContent: 'C' });
     const all = engine.loadTasks();
     const filtered = all.filter(t => t.id !== task.id);
@@ -254,16 +264,16 @@ describe('APOLLO (VAULT) — Autonomous Knowledge & Memory Engine (20 Tests)', (
     expect(engine.getTask(task.id)).toBeNull();
   });
 
-  // 18. Gardening audit logging
-  it('18. completes gardening returning status metadata and execution timing', () => {
+  // 17. Gardening audit logging
+  it('17. completes gardening returning status metadata and execution timing', () => {
     const res = engine.gardenMemories();
     expect(res.success).toBe(true);
     expect(typeof res.finalCount).toBe('number');
     expect(typeof res.prunedCount).toBe('number');
   });
 
-  // 19. Multi-paragraph document ingestion
-  it('19. processes multi-section structured documents chunking headers and paragraphs', async () => {
+  // 18. Multi-paragraph document ingestion
+  it('18. processes multi-section structured documents chunking headers and paragraphs', async () => {
     const longDoc = `# Section 1\nIntroduction to Vector Databases.\n\n# Section 2\nEmbeddings map text to high-dimensional space.\n\n# Section 3\nCosine similarity measures angle between vectors.`;
     const task = await engine.createDocumentTask({ title: 'Vector DBs', rawContent: longDoc });
 
@@ -273,8 +283,8 @@ describe('APOLLO (VAULT) — Autonomous Knowledge & Memory Engine (20 Tests)', (
     expect(processed.summary.length).toBeGreaterThan(0);
   });
 
-  // 20. Persistence across engine instances
-  it('20. persists all document intelligence across ApolloEngine instances', async () => {
+  // 19. Persistence across engine instances
+  it('19. persists all document intelligence across ApolloEngine instances', async () => {
     const task = await engine.createDocumentTask({
       title: 'Persistent Knowledge',
       rawContent: 'This fact must survive new instance construction.'

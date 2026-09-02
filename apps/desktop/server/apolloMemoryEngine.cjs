@@ -110,6 +110,24 @@ function checkFactContradiction(existingFact, newFact) {
     const countMatchA = existingFact.match(/(\d+)\s*(?:entities|devices|items|directories)/i);
     const countMatchB = newFact.match(/(\d+)\s*(?:entities|devices|items|directories)/i);
     if (countMatchA && countMatchB && countMatchA[1] !== countMatchB[1]) {
+      // Mirrors the version-supersession guard above: reject a numerically
+      // smaller incoming count as "not clearly fresher" rather than treating
+      // any difference as an update. This is a real tradeoff, not a strict
+      // improvement — counts (unlike version numbers) can legitimately
+      // decrease (files get deleted, devices get removed), so a genuine
+      // decrease is now archived as "not superseding" and the stale-looking
+      // higher count is what's kept. That's the wrong outcome in that
+      // specific case. It's the better default anyway: in practice most
+      // count facts here come from re-scans that find more, not fewer,
+      // things, and this closes off the same silent-regression failure mode
+      // the version fix targeted, at the cost of that one legitimate-decrease
+      // case. A real fix needs a timestamp on facts to arbitrate by recency
+      // instead of magnitude — this is a stopgap until that exists.
+      const a = parseInt(countMatchA[1], 10);
+      const b = parseInt(countMatchB[1], 10);
+      if (b <= a) {
+        return { supersedes: false, reason: `Incoming count ${b} is not greater than stored ${a}` };
+      }
       return { supersedes: true, reason: `Count updated from ${countMatchA[1]} to ${countMatchB[1]}` };
     }
   }
