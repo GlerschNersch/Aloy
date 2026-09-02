@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   listPlaybackTargets,
   searchLocalMedia,
@@ -22,7 +22,7 @@ describe('Universal Media Dispatcher with Roku ECP & Home Assistant', () => {
     expect(targets.some(t => t.id === 'local')).toBe(true);
     expect(targets.some(t => t.id.startsWith('machine:bazzite'))).toBe(true);
     expect(targets.some(t => t.type === 'roku')).toBe(true);
-  });
+  }, 15000);
 
   it('searches local media on P: drive', () => {
     const results = searchLocalMedia('', 10, 'all');

@@ -159,8 +159,8 @@ describe('LoRA Distillation Dataset Builder', () => {
   it('extracts training samples into Alpaca formatted JSONL with holdout split', () => {
     const result = buildDistillationDataset();
     expect(result).toBeDefined();
-    expect(result.trainFilePath).toContain('aloy_matt_ai_train.jsonl');
-    expect(result.holdoutFilePath).toContain('aloy_matt_ai_eval_holdout.jsonl');
+    expect(result.trainFilePath).toContain('aloy_ai_train.jsonl');
+    expect(result.holdoutFilePath).toContain('aloy_ai_eval_holdout.jsonl');
     expect(fs.existsSync(result.trainFilePath)).toBe(true);
     expect(fs.existsSync(result.holdoutFilePath)).toBe(true);
   });

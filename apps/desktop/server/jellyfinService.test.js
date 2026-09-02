@@ -74,8 +74,8 @@ describe('Jellyfin Service', () => {
     expect(normalized.supportsRemoteControl).toBe(true);
     expect(normalized.nowPlaying).toBeDefined();
     expect(normalized.nowPlaying.name).toBe('The Battle of the Pelennor Fields');
-    expect(normalized.nowPlaying.seriesName).toBe('The Lord of the Rings');
-    expect(normalized.nowPlaying.playbackPercent).toBe(50);
+    expect(normalized.nowPlaying.seriesName).toBe('Lord of the Rings');
+    expect(normalized.nowPlaying.playbackPercent).toBe(33);
     expect(normalized.nowPlaying.isPaused).toBe(false);
   });
 

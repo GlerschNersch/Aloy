@@ -150,7 +150,12 @@ const DEFAULT_STORE = {
     style: 'Concise, direct, highly technical, clean code, dark UI aesthetics.',
     instructions: 'Always address requests directly with production-ready code and optimal architecture.',
     checkInsEnabled: true
-  }
+  },
+  // Ruflo Harvest (ruvnet/ruflo) — Distributed Federation, SPARC Workflows, and Agent Arena
+  federationPeers: [],
+  sparcWorkflows: [],
+  arenaTournaments: [],
+  arenaStrategies: []
 };
 
 const BAK1_PATH = STORE_PATH + '.bak1';

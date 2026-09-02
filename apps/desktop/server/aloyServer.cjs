@@ -2503,6 +2503,126 @@ In conversation, be attentive and curiously inquiring — when natural and relev
     }
   });
 
+  // ── Ruflo Harvest (ruvnet/ruflo): Federation, SPARC, & Arena ─────────
+  const { RufloFederationEngine } = require('./rufloFederation.cjs');
+  const { SparcLifecycleEngine } = require('./sparcLifecycle.cjs');
+  const { AgentArenaEngine } = require('./agentArena.cjs');
+
+  const federationEngine = new RufloFederationEngine();
+  const sparcEngine = new SparcLifecycleEngine();
+  const arenaEngine = new AgentArenaEngine();
+
+  // Federation Routes
+  app.get('/api/federation/peers', (_req, res) => {
+    res.json({ success: true, peers: federationEngine.getPeers(), nodeId: federationEngine.nodeId });
+  });
+
+  app.post('/api/federation/peers/register', (req, res) => {
+    try {
+      const peer = federationEngine.registerPeer(req.body || {});
+      res.json({ success: true, peer });
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/federation/dispatch', async (req, res) => {
+    try {
+      const { peerId, taskData, options } = req.body || {};
+      const result = await federationEngine.dispatchTask(peerId, taskData, options);
+      res.json({ success: true, ...result });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/federation/receive', async (req, res) => {
+    try {
+      const envelope = req.body || {};
+      const result = await federationEngine.handleIncomingMessage(envelope, async (payload) => {
+        return { handled: true, payload };
+      });
+      if (!result.success) {
+        return res.status(result.status || 400).json(result);
+      }
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // SPARC 5-Phase Methodology Routes
+  app.get('/api/sparc/workflows', (_req, res) => {
+    res.json({ success: true, workflows: sparcEngine.listWorkflows() });
+  });
+
+  app.post('/api/sparc/init', (req, res) => {
+    try {
+      const wf = sparcEngine.createWorkflow(req.body || {});
+      res.json({ success: true, workflow: wf });
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/sparc/advance', (req, res) => {
+    try {
+      const { workflowId, phaseData } = req.body || {};
+      if (phaseData) {
+        const wf = sparcEngine.getWorkflow(workflowId);
+        if (wf) sparcEngine.updatePhaseData(workflowId, wf.currentPhase, phaseData);
+      }
+      const result = sparcEngine.advancePhase(workflowId);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/sparc/report/:id', (req, res) => {
+    try {
+      const report = sparcEngine.generateReport(req.params.id);
+      res.json({ success: true, report });
+    } catch (err) {
+      res.status(404).json({ success: false, error: err.message });
+    }
+  });
+
+  // Agent Arena Routes
+  app.get('/api/arena/strategies', (_req, res) => {
+    res.json({ success: true, strategies: arenaEngine.getStrategies(), tournaments: arenaEngine.getTournaments() });
+  });
+
+  app.post('/api/arena/match', async (req, res) => {
+    try {
+      const { stratAId, stratBId, task } = req.body || {};
+      const result = await arenaEngine.runMatch(stratAId, stratBId, task || 'Benchmark Task');
+      res.json({ success: true, match: result });
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/arena/tournament', async (req, res) => {
+    try {
+      const { tasks } = req.body || {};
+      const tournament = await arenaEngine.runTournament(tasks);
+      res.json({ success: true, tournament });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/arena/evolve', async (req, res) => {
+    try {
+      const { baseStrategyId, generations } = req.body || {};
+      const evolution = await arenaEngine.evolveStrategy(baseStrategyId, generations);
+      res.json({ success: true, evolution });
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
   app.post('/api/vision/triage', async (req, res) => {
     try {
       const { triageSnapshot } = require('./visionTriage.cjs');

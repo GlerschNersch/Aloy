@@ -2543,6 +2543,156 @@ export const TOOLS = [
         return JSON.stringify({ error: err.message || 'Execution failed' });
       }
     }
+  },
+
+  {
+    name: 'federation_dispatch_task',
+    requiresConfirmation: true,
+    confirmLabel: (args) => `Dispatch federated task to peer "${args.peerId}"?`,
+    definition: {
+      type: 'function',
+      function: {
+        name: 'federation_dispatch_task',
+        description: 'Dispatch an agent task to a registered federation peer node across the network (e.g. mobile node, secondary machine) with zero-trust HMAC signature and circuit-breaker protection.',
+        parameters: {
+          type: 'object',
+          properties: {
+            peerId: { type: 'string', description: 'ID of the target federation peer' },
+            taskData: { type: 'object', description: 'Task payload to execute on the remote node' }
+          },
+          required: ['peerId', 'taskData']
+        }
+      }
+    },
+    execute: async (args) => {
+      try {
+        const { apiFetch } = await import('./aloyApi.js');
+        const resp = await apiFetch('/api/federation/dispatch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ peerId: args.peerId, taskData: args.taskData })
+        });
+        const data = await resp.json();
+        return JSON.stringify(data, null, 2);
+      } catch (err) {
+        return JSON.stringify({ error: err.message });
+      }
+    }
+  },
+
+  {
+    name: 'sparc_manage_workflow',
+    requiresConfirmation: false,
+    definition: {
+      type: 'function',
+      function: {
+        name: 'sparc_manage_workflow',
+        description: 'Initialize, evaluate quality gates, advance phases, or generate traceability reports for a SPARC 5-phase software development lifecycle (Specification -> Pseudocode -> Architecture -> Refinement -> Completion).',
+        parameters: {
+          type: 'object',
+          properties: {
+            action: { type: 'string', enum: ['init', 'advance', 'report', 'list'], description: 'Action to perform' },
+            featureName: { type: 'string', description: 'Feature name (for init)' },
+            goalDescription: { type: 'string', description: 'Goal description (for init)' },
+            workflowId: { type: 'string', description: 'Target workflow ID (for advance/report)' },
+            phaseData: { type: 'object', description: 'Data to update in current phase before advancing' }
+          },
+          required: ['action']
+        }
+      }
+    },
+    execute: async (args) => {
+      try {
+        const { apiFetch } = await import('./aloyApi.js');
+        if (args.action === 'list') {
+          const resp = await apiFetch('/api/sparc/workflows');
+          return JSON.stringify(await resp.json(), null, 2);
+        }
+        if (args.action === 'init') {
+          const resp = await apiFetch('/api/sparc/init', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ featureName: args.featureName, goalDescription: args.goalDescription })
+          });
+          return JSON.stringify(await resp.json(), null, 2);
+        }
+        if (args.action === 'advance') {
+          const resp = await apiFetch('/api/sparc/advance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ workflowId: args.workflowId, phaseData: args.phaseData })
+          });
+          return JSON.stringify(await resp.json(), null, 2);
+        }
+        if (args.action === 'report') {
+          const resp = await apiFetch(`/api/sparc/report/${args.workflowId}`);
+          return JSON.stringify(await resp.json(), null, 2);
+        }
+        return JSON.stringify({ error: `Unknown SPARC action: ${args.action}` });
+      } catch (err) {
+        return JSON.stringify({ error: err.message });
+      }
+    }
+  },
+
+  {
+    name: 'arena_run_tournament',
+    requiresConfirmation: false,
+    definition: {
+      type: 'function',
+      function: {
+        name: 'arena_run_tournament',
+        description: 'Run round-robin strategy tournaments, 1v1 matches, or prompt hill-climbing evolution to rank and evolve agent strategies.',
+        parameters: {
+          type: 'object',
+          properties: {
+            action: { type: 'string', enum: ['list', 'match', 'tournament', 'evolve'], description: 'Action to perform' },
+            stratAId: { type: 'string', description: 'Strategy A ID (for match)' },
+            stratBId: { type: 'string', description: 'Strategy B ID (for match)' },
+            task: { type: 'string', description: 'Benchmark task description' },
+            baseStrategyId: { type: 'string', description: 'Strategy ID to mutate (for evolve)' },
+            generations: { type: 'number', description: 'Number of generations (for evolve)' }
+          },
+          required: ['action']
+        }
+      }
+    },
+    execute: async (args) => {
+      try {
+        const { apiFetch } = await import('./aloyApi.js');
+        if (args.action === 'list') {
+          const resp = await apiFetch('/api/arena/strategies');
+          return JSON.stringify(await resp.json(), null, 2);
+        }
+        if (args.action === 'match') {
+          const resp = await apiFetch('/api/arena/match', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stratAId: args.stratAId, stratBId: args.stratBId, task: args.task })
+          });
+          return JSON.stringify(await resp.json(), null, 2);
+        }
+        if (args.action === 'tournament') {
+          const resp = await apiFetch('/api/arena/tournament', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tasks: args.task ? [args.task] : undefined })
+          });
+          return JSON.stringify(await resp.json(), null, 2);
+        }
+        if (args.action === 'evolve') {
+          const resp = await apiFetch('/api/arena/evolve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseStrategyId: args.baseStrategyId, generations: args.generations || 3 })
+          });
+          return JSON.stringify(await resp.json(), null, 2);
+        }
+        return JSON.stringify({ error: `Unknown arena action: ${args.action}` });
+      } catch (err) {
+        return JSON.stringify({ error: err.message });
+      }
+    }
   }
 ];
 
@@ -2708,6 +2858,11 @@ export function getToolDefinitions(userQuery = '') {
     // 7. Obsidian, Vault, Memory & Notes
     if (/obsidian|vault|apollo_|knowledge_graph/.test(name)) {
       return isNotesQuery;
+    }
+
+    // 8. Ruflo Harvest (Federation, SPARC, Arena)
+    if (name.startsWith('federation_') || name.startsWith('sparc_') || name.startsWith('arena_')) {
+      return isWorkflowQuery || isCodeQuery || isResearchQuery;
     }
 
     // 9. Reminders, User Memory & Profile updates (Always available for general conversation)

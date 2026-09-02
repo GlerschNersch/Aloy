@@ -206,6 +206,13 @@ async function syncToVault() {
       domain: 'Autonomous Learning & Zero-Context Pipeline',
       description: 'Zero-context RPC script tool execution pipelines, Genetic-Pareto skill & prompt evolution (GEPA), FTS5 cross-session recall, Honcho dialectic user modeling, and universal messaging gateway.',
       files: ['apps/desktop/server/hermesScriptPipeline.cjs', 'apps/desktop/server/hermesEvolutionEngine.cjs', 'apps/desktop/server/hermesDialecticMemory.cjs', 'apps/desktop/server/hermesGateway.cjs']
+    },
+    {
+      name: 'ruvnet/ruflo',
+      url: 'https://github.com/ruvnet/ruflo',
+      domain: 'Agent Federation, SPARC Gates & Competitive Arena',
+      description: 'Zero-trust cross-machine agent federation with HMAC-signed envelopes, SPARC 5-phase gated development lifecycle, and Agent Arena round-robin tournaments with ELO tracking and prompt hill-climbing.',
+      files: ['apps/desktop/server/rufloFederation.cjs', 'apps/desktop/server/sparcLifecycle.cjs', 'apps/desktop/server/agentArena.cjs']
     }
   ];
 

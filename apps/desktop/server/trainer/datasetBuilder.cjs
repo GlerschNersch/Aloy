@@ -329,7 +329,9 @@ function buildAloyAiDataset() {
     trainCount: trainSamples.length,
     holdoutCount: holdoutSamples.length,
     trainFile: ALOY_AI_TRAIN_FILE,
-    holdoutFile: ALOY_AI_HOLDOUT_FILE
+    holdoutFile: ALOY_AI_HOLDOUT_FILE,
+    trainFilePath: ALOY_AI_TRAIN_FILE,
+    holdoutFilePath: ALOY_AI_HOLDOUT_FILE
   };
 }
 
