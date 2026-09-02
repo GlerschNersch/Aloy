@@ -50,7 +50,7 @@ The cross-agent findings feed (`InboxView.jsx`, `inboxAggregator.cjs`) — not i
 
 ## "Harvested from X"
 
-A recurring, deliberate pattern in this codebase: several modules are explicitly ported ideas from other open-source projects, named in their own header comments — `mineruNormalizer.cjs` (OpenDataLab/MinerU), `vaultSync.cjs` (memU's 3-layer Markdown memory), `cliHubRunner.cjs` and `toolEnvelope.cjs` (HKUDS/CLI-Anything), `skillSynthesis.cjs` (KiroCrew), `mindwalkAdapter.cjs` (cosmtrek/mindwalk). This is the same workflow as this session's animejs/PostHog/mattpocock-skills exploration — not a one-off.
+A recurring, deliberate pattern in this codebase: several modules are explicitly ported ideas from other open-source projects, named in their own header comments — `mineruNormalizer.cjs` (OpenDataLab/MinerU), `vaultSync.cjs` (memU's 3-layer Markdown memory), `cliHubRunner.cjs` and `toolEnvelope.cjs` (HKUDS/CLI-Anything), `skillSynthesis.cjs` (KiroCrew), `mindwalkAdapter.cjs` (cosmtrek/mindwalk), and `rufloFederation.cjs`, `sparcLifecycle.cjs`, `agentArena.cjs` (ruvnet/ruflo). This is the same workflow as this session's animejs/PostHog/mattpocock-skills exploration — not a one-off.
 
 ## Sub-agent naming vs. UI `activeView`
 

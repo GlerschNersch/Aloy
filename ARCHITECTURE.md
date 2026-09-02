@@ -50,6 +50,42 @@ Initial hydration on desktop is one async IPC round trip, gated by a `hasHydrate
 
 `apps/desktop/server/inboxAggregator.cjs` (`getInboxFeed`) merges Apollo (confidence-escalation entries), Athena (completed research tasks), Minerva (`securityGuard`/`auditLogger` blocked-access and injection events), and Hephaestus (Pantheon Council-dispatched work orders still sitting `queued`, shown unconditionally rather than window-gated) into one time-windowed (default 24h), recency-sorted list. Exposed as both `GET /api/inbox/feed` and the Electron IPC channel `inbox:feed` (`window.electronAPI.getInboxFeed`), so it works identically whether the renderer takes the IPC path (real app) or a direct HTTP fetch (bare `vite` dev mode) — see `InboxView.jsx`'s IPC-first, HTTP-fallback pattern, matching `AthenaWorkspace.jsx`. Vision-timeline notable events and lock-unlock history are merged in client-side in `InboxView.jsx` rather than server-side, since both are already fetched/tracked there — desktop-only for now; see DECISIONS.md for why mobile parity is a deliberate follow-up, not an oversight.
 
+## Zero-Trust Agent Federation
+
+`rufloFederation.cjs` provides authenticated, peer-to-peer agent messaging across distributed devices (Desktop, Aloy Mobile, Bazzite, remote nodes):
+- **4-Tier Trust Model**: `UNTRUSTED` (0), `VERIFIED` (1), `TRUSTED` (2), `PRIVILEGED` (3). Unverified peers cannot trigger tool executions or write operations.
+- **HMAC-SHA256 Envelopes**: Every outbound envelope includes `{ sourceNodeId, messageType, payload, hops, timestamp, signature }`. Signatures are computed using SHA256 HMAC and verified against the registered peer's secret. Messages older than 5 minutes are rejected to prevent replay attacks.
+- **Outbound PII Scrubbing**: All payload strings pass through an automated redaction regex pipeline before network transit, sanitizing Windows/Linux user profile paths (`%USERPROFILE%`, `~`) and API tokens (`Bearer`, `ghp_`, `github_pat_`).
+- **Circuit Breaker**: `maxHops` ceiling prevents infinite delegation loops across subagents. Dispatches that exceed hop limits abort with `HOP_LIMIT_EXCEEDED`.
+
+## SPARC 5-Phase Quality Gates
+
+`sparcLifecycle.cjs` enforces a deterministic development lifecycle for autonomous software tasks handled by Hephaestus:
+1. **Specification**: Goal definition, constraints, and $\ge 3$ formal acceptance criteria.
+2. **Pseudocode**: Algorithmic step-by-step logic and explicit edge/failure-case handling.
+3. **Architecture**: Module specifications and affected file lists.
+4. **Refinement**: Code diff generation and test suite execution ($0$ failures allowed).
+5. **Completion**: Security audit sign-off, documentation synchronization, and GFM traceability report generation.
+
+State is persisted in `sparcWorkflows` in the shared store, allowing Hephaestus to resume across restarts without losing gate validation progress.
+
+## Agent Arena & Tournament Evaluation
+
+`agentArena.cjs` runs empirical prompt strategy evaluations:
+- **Pre-Seeded Strategies**: Minimalist Executor, Defensive Verifier, Tool-First Strategist, and Deep-Thinking Explorer.
+- **1v1 Matches & ELO**: Deterministic benchmark tasks evaluated head-to-head, updating standard logistic ELO ratings ($K=32$).
+- **Round-Robin Tournaments**: Computes pairwise payoff matrices to generate Wolfram competitive arrays and ranked leaderboards.
+- **Adaptive Prompt Evolution**: Mutates system prompts across generations, retaining variants that outperform baseline champions.
+
+## Universal Media Dispatcher
+
+`mediaDispatcher.cjs` provides multi-room, multi-target media casting:
+- **Local PC**: Native desktop player playback.
+- **Roku Ultra (ECP)**: External Control Protocol over LAN port 8060 with direct app deep-linking into Jellyfin (`id="592369"`) and fallback Roku Media Player streaming (`id="2213"`).
+- **Remote Linux Machines**: Bazzite (Living Room) and Lenny (Server) via SSH.
+- **Home Assistant Displays**: Cast targets across Google Nest displays and connected smart TVs.
+- **Party Mode**: Multi-target broadcast syncing playback across all active displays simultaneously.
+
 ## Animation conventions (both platforms)
 
 **Desktop** (framer-motion): every real floating modal/drawer uses `AnimatePresence` wrapping `{isOpen && (<motion.div ...>)}`, with `transition={{ type: 'spring', damping: 25, stiffness: 220 or 300 }}`. The dark backdrop behind a modal is a plain (non-animated) element — it's a hard on/off gated by the same conditional, not itself fading; only the panel content springs.
