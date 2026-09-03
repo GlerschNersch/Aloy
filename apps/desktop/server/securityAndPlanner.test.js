@@ -59,7 +59,7 @@ describe('Audit Logger', () => {
     expect(entry.payload.token).toBe('[REDACTED]');
     expect(entry.status).toBe('success');
 
-    const recent = getRecentAuditLogs({ limit: 20 });
+    const recent = getRecentAuditLogs({ target: 'light.office', limit: 20 });
     expect(recent.length).toBeGreaterThan(0);
     const logged = recent.find(r => r.id === entry.id);
     expect(logged).toBeDefined();

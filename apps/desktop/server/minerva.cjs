@@ -9,6 +9,7 @@ const path = require('path');
 const os = require('os');
 const { logAuditEvent, getRecentAuditLogs } = require('./auditLogger.cjs');
 const { getOrCreateToken } = require('./auth.cjs');
+const { getInsecureLanDispatcher } = require('./http.cjs');
 
 // Ensure credentials (.env) are loaded into process.env
 const EXTERNAL_ENV_PATH = path.join(os.homedir(), '.aloy-server', '.env');
@@ -20,14 +21,11 @@ try {
   } catch {}
 }
 
-let tlsDispatcher = null;
-try {
-  const { Agent } = require('undici');
-  tlsDispatcher = new Agent({ connect: { rejectUnauthorized: false } });
-} catch {}
+// getInsecureLanDispatcher() is lazy/shared (http.cjs) — no need to construct
+// our own Agent here anymore.
 
 const MEDIA_STACK_CONFIG = {
-  sonarr: { name: 'Sonarr', url: 'http://127.0.0.1:8989/api/v3/system/status', port: 8989, exe: path.join(os.homedir(), 'MediaStack', 'Sonarr', 'Sonarr.exe'), args: ['--data=C:\\ProgramData\\Sonarr', '--nobrowser'] },
+  sonarr: { name: 'Sonarr', url: 'http://127.0.0.1:8989/api/v3/system/status', port: 8989, exe: path.join(os.homedir(), 'MediaStack', 'Sonarr', 'Sonarr.Console.exe'), args: ['--data=C:\\ProgramData\\Sonarr', '--nobrowser'] },
   radarr: { name: 'Radarr', url: 'http://127.0.0.1:7878/api/v3/system/status', port: 7878, exe: path.join(os.homedir(), 'MediaStack', 'Radarr', 'Radarr.exe'), args: ['--data=C:\\ProgramData\\Radarr', '--nobrowser'] },
   lidarr: { name: 'Lidarr', url: 'http://127.0.0.1:8686/api/v1/system/status', port: 8686, exe: path.join(os.homedir(), 'MediaStack', 'Lidarr', 'Lidarr.exe'), args: ['--data=C:\\ProgramData\\Lidarr', '--nobrowser'] },
   retroarr: { name: 'RetroArr', url: 'http://127.0.0.1:5002/api/v3/system/status', port: 5002, exe: path.join(os.homedir(), 'MediaStack', 'RetroArr', 'RetroArr.Host.exe'), args: [] },
@@ -117,7 +115,7 @@ class MinervaEngine {
           headers: { Authorization: `Bearer ${haToken}` },
           signal: AbortSignal.timeout(3000)
         };
-        if (tlsDispatcher) fetchOpts.dispatcher = tlsDispatcher;
+        if (haUrl.startsWith('https:')) fetchOpts.dispatcher = getInsecureLanDispatcher();
         const haRes = await this.fetch(`${haUrl}/api/`, fetchOpts);
         checks.homeAssistant = { status: haRes.ok ? 'online' : 'degraded', code: haRes.status };
       }

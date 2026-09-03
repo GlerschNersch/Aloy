@@ -11,6 +11,7 @@ const { pathToFileURL } = require('url');
 const { exec } = require('child_process');
 const { jellyfinService } = require('./jellyfinService.cjs');
 const { executeRemoteCommand, getMachineConfig, checkPortOpen } = require('./bazziteBridge.cjs');
+const { httpFetch, TIMEOUTS, getInsecureLanDispatcher } = require('./http.cjs');
 
 const MOVIES_ROOT = process.env.MOVIES_DIR || 'P:\\Movies';
 const TV_SHOWS_ROOT = process.env.TV_SHOWS_DIR || 'P:\\TV Shows';
@@ -136,12 +137,15 @@ async function callHomeAssistantService(domain, service, entityId, extraData = {
   if (!haToken) throw new Error('HA_TOKEN is not configured in environment');
 
   const payload = { ...(entityId ? { entity_id: entityId } : {}), ...extraData };
-  const res = await fetch(`${haUrl}/api/services/${domain}/${service}`, {
+  const res = await httpFetch(`${haUrl}/api/services/${domain}/${service}`, {
     method: 'POST',
+    timeoutMs: TIMEOUTS.API,
     headers: {
       'Authorization': `Bearer ${haToken}`,
       'Content-Type': 'application/json'
     },
+    // HA on a LAN typically runs a self-signed cert — see getInsecureLanDispatcher.
+    ...(haUrl.startsWith('https:') ? { dispatcher: getInsecureLanDispatcher() } : {}),
     body: JSON.stringify(payload)
   });
   return res.ok;

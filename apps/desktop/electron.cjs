@@ -235,6 +235,17 @@ function createHudWindow(initiallyExpanded = false) {
 }
 
 // IPC Handlers for Local File & Folder Access
+ipcMain.handle('app:getBuildInfo', () => {
+  try {
+    const raw = fs.readFileSync(path.join(__dirname, 'server', 'buildInfo.json'), 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    // Generated at build time by scripts/genBuildInfo.cjs — absent in a
+    // checkout that hasn't run a build/dev script yet.
+    return { version: app.getVersion(), gitSha: 'unknown', gitBranch: 'unknown', dirty: false, builtAt: null };
+  }
+});
+
 ipcMain.handle('dialog:selectFolder', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory']
@@ -1267,6 +1278,11 @@ ipcMain.handle('athena:deleteTask', async (_event, taskId) => {
 ipcMain.handle('athena:cancelTask', async (_event, taskId) => {
   const { athenaEngine } = require('./server/athena.cjs');
   return athenaEngine.cancelTask(taskId);
+});
+
+ipcMain.handle('athena:resumeTask', async (_event, taskId) => {
+  const { athenaEngine } = require('./server/athena.cjs');
+  return athenaEngine.resumeTask(taskId);
 });
 
 // ==========================================

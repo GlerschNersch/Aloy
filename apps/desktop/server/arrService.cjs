@@ -160,10 +160,10 @@ class ArrService extends EventEmitter {
       },
       sonarr: {
         displayName: 'Sonarr',
-        exe: path.join(MEDIA_STACK_DIR, 'Sonarr', 'Sonarr.exe'),
+        exe: path.join(MEDIA_STACK_DIR, 'Sonarr', 'Sonarr.Console.exe'),
         args: ['--data=C:\\ProgramData\\Sonarr', '--nobrowser'],
         cwd: path.join(MEDIA_STACK_DIR, 'Sonarr'),
-        imageNames: ['Sonarr.exe', 'Sonarr.Console.exe'],
+        imageNames: ['Sonarr.Console.exe', 'Sonarr.exe'],
       },
       lidarr: {
         displayName: 'Lidarr',

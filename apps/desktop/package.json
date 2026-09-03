@@ -17,7 +17,11 @@
     "electron:build": "vite build && electron-builder",
     "pack:asar": "vite build && node scripts/packApp.cjs",
     "smoke": "node scripts/smoke.cjs",
-    "smoke:boot": "node -e \"process.env.ALOY_SMOKE_BOOT=1;require('./scripts/smoke.cjs')\""
+    "smoke:boot": "node -e \"process.env.ALOY_SMOKE_BOOT=1;require('./scripts/smoke.cjs')\"",
+    "predev": "node scripts/genBuildInfo.cjs",
+    "preelectron:dev": "node scripts/genBuildInfo.cjs",
+    "preelectron:build": "node scripts/genBuildInfo.cjs",
+    "prepack:asar": "node scripts/genBuildInfo.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
@@ -35,7 +39,8 @@
     "pdfjs-dist": "^6.1.200",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "ssh2": "^1.17.0"
+    "ssh2": "^1.17.0",
+    "undici": "^7.29.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",

@@ -25,6 +25,23 @@
 
 const DEFAULT_TIMEOUT_MS = 10000;
 
+// Home Assistant (and similar LAN-only appliances) commonly run behind a
+// self-signed or private-CA certificate — there's no public CA to validate
+// against, and the alternative is walking the user through importing a
+// private root cert into Node's trust store. This dispatcher is opt-in per
+// call site (pass it as `dispatcher` — never the default) and named for
+// exactly what it is: a deliberate trust reduction. Only pass it to a
+// user-configured LAN host you already hold a bearer token for, never to an
+// arbitrary/external URL.
+let insecureLanDispatcher = null;
+function getInsecureLanDispatcher() {
+  if (!insecureLanDispatcher) {
+    const { Agent } = require('undici');
+    insecureLanDispatcher = new Agent({ connect: { rejectUnauthorized: false } });
+  }
+  return insecureLanDispatcher;
+}
+
 // Named timeouts, so call sites declare intent instead of a magic number.
 // These differ by an order of magnitude and getting them wrong is its own
 // outage: a 10s deadline on a local LLM generation would abort every long
@@ -143,5 +160,6 @@ module.exports = {
   httpJson,
   httpText,
   postJson,
-  probe
+  probe,
+  getInsecureLanDispatcher
 };

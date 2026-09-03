@@ -1498,10 +1498,14 @@ export const TOOLS = [
       type: 'function',
       function: {
         name: 'update_user_profile',
-        description: "Update the user's core profile settings (such as preferred AI communication style or personal guidelines) when instructed how they want you to speak, format answers, or act.",
+        description: "Update the user's core profile settings (such as their name, preferred AI communication style, or personal guidelines) when instructed how they want you to speak, format answers, act, or when they tell you their actual name.",
         parameters: {
           type: 'object',
           properties: {
+            name: {
+              type: 'string',
+              description: "The user's actual first name (or full name), e.g. \"Matt\". Only set this when the user directly states their own name — never guess it."
+            },
             style: {
               type: 'string',
               description: 'Updated communication style, e.g. "Concise, direct, highly technical, bulleted format."'
@@ -1517,6 +1521,7 @@ export const TOOLS = [
     },
     execute: async (args, ctx) => {
       const patch = {};
+      if (args.name) patch.name = args.name.trim();
       if (args.style) patch.style = args.style.trim();
       if (args.instructions) patch.instructions = args.instructions.trim();
       if (Object.keys(patch).length === 0) return 'No profile changes provided.';

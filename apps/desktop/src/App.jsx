@@ -620,11 +620,23 @@ function MainApp() {
         // never matched anything, so this always fell through to
         // fetched[0] (whatever Ollama lists first, i.e. most recently
         // created) instead of actually preferring aloy-assistant.
+        //
+        // That fetched[0] fallback was a real, previously-invisible bug (found
+        // 2026-09-02): with aloy-assistant not installed, this silently routed
+        // every local chat turn to whatever model Ollama happened to list
+        // first — once a `guoxuter/ov_intent_analysis_sft` fine-tune, never
+        // intended for open-ended conversation, with no error and no visible
+        // indication anything was wrong. Wrong-model-silently is worse than
+        // no-model-visibly: if neither the persisted selection nor
+        // aloy-assistant is installed, leave the selection as-is (stays
+        // 'aloy-assistant' by default) rather than guessing — Ollama will
+        // then return a clear, visible error on send instead of a
+        // plausible-looking answer from an unrelated model.
         setSelectedModel(prev => {
           if (fetched.find(m => m.name === prev)) return prev;
           const aloyModel = fetched.find(m => m.name === 'aloy-assistant' || m.name === 'aloy-assistant:latest' || m.name.startsWith('aloy-assistant:'));
           if (aloyModel) return aloyModel.name;
-          return fetched.length > 0 ? fetched[0].name : prev;
+          return prev;
         });
       }
     };
@@ -1047,7 +1059,7 @@ When the user explicitly asks you to research, look into, or learn about somethi
 When the user directly corrects something you said, or explicitly tells you to remember/note a fact going forward: call save_lesson with a short topic and the corrected fact — this is different from save_researched_knowledge (that's for things you looked up yourself; this is for things the user told you directly, and it always takes priority).
 When the user asks about your own skill gaps, proficiency, what you're weak at, or what needs review: call get_skills_dashboard first — this reflects real logged data, do not guess or estimate a percentage yourself. If any category comes back as a critical/low-proficiency gap, after reporting it offer to research one of its specific open gap questions right now — if the user agrees, call research_topic using that gap's actual question text as the topic (not a paraphrase), present the sourced result, and only call save_researched_knowledge if they then confirm they want it kept, same as any other research.
 When ${userProfile.name} shares personal details, habits, preferences, daily routines, pet peeves, workflow choices, tooling/editor preferences, food/drink tastes, or answers questions about himself: ALWAYS immediately call save_user_memory with a clear, concise fact to permanently add it to his PERSISTENT MEMORY BANK so you remember it forever across all future conversations.
-When ${userProfile.name} gives instructions on how you should format responses, speak, or behave: call update_user_profile to permanently adapt your personality and communication style to his liking.
+When ${userProfile.name} gives instructions on how you should format responses, speak, or behave — or tells you their actual name — call update_user_profile to permanently adapt your personality, communication style, and name to his liking.
 In conversation, be attentive and curiously inquiring — when natural and relevant, ask thoughtful follow-up questions to understand his lifestyle, habits, and preferences deeper over time.
 If recommending local OS shell commands to execute, format as: [COMMAND: command_string].${checkIn ? `\n\nThis is the first message today — before addressing the request below, naturally weave in a brief, genuine one-line check-in about how ${userProfile.name}'s day is going, in your own words matching the Communication Style above. Keep it short and light; don't force it if the request is clearly urgent or time-sensitive.` : ''}`;
   };

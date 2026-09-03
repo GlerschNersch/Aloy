@@ -255,8 +255,32 @@ function load() {
   return { ...DEFAULT_STORE, ...parsed };
 }
 
-function save(store) {
-  atomicSaveJson(STORE_PATH, store);
+// MERGES with the current on-disk state rather than replacing it outright.
+//
+// BUG (root-caused 2026-09-02, discovered while chasing a stale "User"
+// dashboard greeting): this used to be a raw `atomicSaveJson(STORE_PATH,
+// store)` — whatever object a caller passed became the ENTIRE file. At
+// least 19 call sites across 7 files (agentArena.cjs, hermesGateway.cjs,
+// hermesDialecticMemory.cjs, hermesEvolutionEngine.cjs, sparcLifecycle.cjs,
+// rufloFederation.cjs, and seedFromBackupIfEmpty below) call
+// `store.save({ oneField: ... })` with a deliberately partial object —
+// every one of them, on every call, was silently wiping every other field
+// in the store (chats, memories, reminders, budgets, userProfile,
+// everything) down to just that one key. Live store.json was found reduced
+// to a single field; both rolling backups (.bak1/.bak2) were already
+// corrupted the same way, meaning this had been recurring across multiple
+// past restarts, not a one-off.
+//
+// load() + spread is still synchronous end-to-end (see the store:save IPC
+// handler comment in electron.cjs) — no await between the read and the
+// write, so this stays atomic relative to any other store.cjs consumer.
+// A caller that genuinely needs to remove a field entirely must still do
+// so explicitly (merge can't delete a key it wasn't told to drop), but no
+// current call site does that — every one replaces a key with a fresh
+// value of the same key, which this now does safely.
+function save(partialOrFullStore) {
+  const merged = { ...load(), ...partialOrFullStore };
+  atomicSaveJson(STORE_PATH, merged);
 }
 
 // One-time seed from the NAS backup, on this server's very first run only —

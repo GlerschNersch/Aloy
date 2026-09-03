@@ -69,7 +69,7 @@ const { ConclaveEngine } = require('./conclave.cjs');
 const { globalJobRadar } = require('./jobRadar.cjs');
 const { SidecarWatchdog } = require('./sidecarWatchdog.cjs');
 const { routeModelRequest } = require('./modelRouter.cjs');
-const { httpFetch, httpJson, TIMEOUTS } = require('./http.cjs');
+const { httpFetch, httpJson, TIMEOUTS, getInsecureLanDispatcher } = require('./http.cjs');
 const { globalVoiceBridge, DEFAULT_VOICES } = require('./voiceBridge.cjs');
 const { globalBrowserAgent } = require('./browserAgent.cjs');
 const { globalHassTelemetryBridge } = require('./hassTelemetryBridge.cjs');
@@ -119,8 +119,14 @@ async function startAloyServer(port = 7890, extraHandlers = {}) {
   const { getToolDefinitions, getTool, parseToolArguments, registerMcpTools, toolRequiresConfirmation, isWriteTool } = await import(resolveService('tools.js'));
   const {
     fetchHomeAssistantStates, groupEntitiesByCategory, calculateSmartHomeStats, executeHAService,
-    formatSmartHomeContext, fetchGoogleCalendarEvents, fetchLLMVisionTimeline, summarizeLLMVisionActivity, getLLMVisionEventsDetail
+    formatSmartHomeContext, fetchGoogleCalendarEvents, fetchLLMVisionTimeline, summarizeLLMVisionActivity, getLLMVisionEventsDetail,
+    _setBackendDispatcherFactory
   } = await import(resolveService('homeassistant.js'));
+  // homeassistant.js is Vite-bundled for the renderer too, so it can't import
+  // `undici` itself (see its own comment on this) — wire in the real,
+  // asar-aware dispatcher from this side. Home Assistant on a LAN commonly
+  // runs a self-signed cert.
+  _setBackendDispatcherFactory(getInsecureLanDispatcher);
   const { calculateBudgetStatus } = await import(resolveService('financeTracker.js'));
   const { createReminder } = await import(resolveService('reminders.js'));
   const { createWorkoutEntry, calculateWorkoutStreak, formatWorkoutHistoryContext } = await import(resolveService('workouts.js'));
@@ -769,7 +775,7 @@ When the user explicitly asks you to research, look into, or learn about somethi
 When the user directly corrects something you said, or explicitly tells you to remember/note a fact going forward: call save_lesson with a short topic and the corrected fact — this is different from save_researched_knowledge (that's for things you looked up yourself; this is for things the user told you directly, and it always takes priority).
 When the user asks about your own skill gaps, proficiency, what you're weak at, or what needs review: call get_skills_dashboard first — this reflects real logged data, do not guess or estimate a percentage yourself. If any category comes back as a critical/low-proficiency gap, after reporting it offer to research one of its specific open gap questions right now — if the user agrees, call research_topic using that gap's actual question text as the topic (not a paraphrase), present the sourced result, and only call save_researched_knowledge if they then confirm they want it kept, same as any other research.
 When ${d.userProfile.name} shares personal details, habits, preferences, daily routines, pet peeves, workflow choices, tooling/editor preferences, food/drink tastes, or answers questions about himself: ALWAYS immediately call save_user_memory with a clear, concise fact to permanently add it to his PERSISTENT MEMORY BANK so you remember it forever across all future conversations.
-When ${d.userProfile.name} gives instructions on how you should format responses, speak, or behave: call update_user_profile to permanently adapt your personality and communication style to his liking.
+When ${d.userProfile.name} gives instructions on how you should format responses, speak, or behave — or tells you their actual name — call update_user_profile to permanently adapt your personality, communication style, and name to his liking.
 In conversation, be attentive and curiously inquiring — when natural and relevant, ask thoughtful follow-up questions to understand his lifestyle, habits, and preferences deeper over time.${checkIn ?`\n\nThis is the first message today — before addressing the request below, naturally weave in a brief, genuine one-line check-in about how ${d.userProfile.name}'s day is going, in your own words matching the Communication Style above. Keep it short and light; don't force it if the request is clearly urgent or time-sensitive.` : ''}`;
   }
 
@@ -1255,6 +1261,17 @@ In conversation, be attentive and curiously inquiring — when natural and relev
 
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
+  app.get('/api/build-info', (_req, res) => {
+    try {
+      const raw = fs.readFileSync(path.join(__dirname, 'buildInfo.json'), 'utf8');
+      res.json(JSON.parse(raw));
+    } catch {
+      // Generated at build time by scripts/genBuildInfo.cjs — absent in a
+      // checkout that hasn't run a build/dev script yet.
+      res.json({ version: require('../package.json').version, gitSha: 'unknown', gitBranch: 'unknown', dirty: false, builtAt: null });
+    }
+  });
+
   app.post('/api/hud/open', (_req, res) => {
     if (extraHandlers.openHud) {
       extraHandlers.openHud();
@@ -1613,6 +1630,8 @@ In conversation, be attentive and curiously inquiring — when natural and relev
         timeoutMs: TIMEOUTS.API,
         method: req.method,
         headers: { Authorization: `Bearer ${haToken}`, 'Content-Type': 'application/json' },
+        // HA on a LAN typically runs a self-signed cert — see getInsecureLanDispatcher.
+        ...(haUrl.startsWith('https:') ? { dispatcher: getInsecureLanDispatcher() } : {}),
         ...(req.method !== 'GET' && req.method !== 'HEAD' && req.body !== undefined
           ? { body: JSON.stringify(req.body) }
           : {})
@@ -2149,6 +2168,16 @@ In conversation, be attentive and curiously inquiring — when natural and relev
 
   app.post('/api/athena/tasks/:id/cancel', (req, res) => {
     const result = athenaEngine.cancelTask(req.params.id);
+    res.json(result);
+  });
+
+  // Resumes a failed-but-resumable task from its last checkpoint instead of
+  // re-running the whole (often expensive) search step — the engine already
+  // tracks this via task.canResume; previously nothing in either client ever
+  // called this, so every retry re-did the full search from scratch.
+  app.post('/api/athena/tasks/:id/resume', (req, res) => {
+    const result = athenaEngine.resumeTask(req.params.id);
+    if (result.success === false) return res.status(400).json(result);
     res.json(result);
   });
 

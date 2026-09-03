@@ -30,6 +30,11 @@ export default function AthenaWorkspace({ isFullPage = false, onClose }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Replaces a native confirm() dialog — that broke the app's own themed
+  // visual language for the one destructive action in this workspace.
+  // Holds the task pending deletion, or null when no confirmation is open.
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   // Form state
   const [newQuery, setNewQuery] = useState('');
@@ -139,9 +144,17 @@ export default function AthenaWorkspace({ isFullPage = false, onClose }) {
     }
   };
 
-  const handleDeleteTask = async (taskId, e) => {
+  // Opens the themed confirmation card rather than deleting immediately —
+  // see confirmDeleteTask for the actual delete.
+  const handleDeleteTask = (taskId, e) => {
     e?.stopPropagation();
-    if (!confirm('Dismiss this research dossier?')) return;
+    setPendingDeleteId(taskId);
+  };
+
+  const confirmDeleteTask = async () => {
+    const taskId = pendingDeleteId;
+    setPendingDeleteId(null);
+    if (!taskId) return;
     try {
       if (window.electronAPI?.athenaDeleteTask) {
         await window.electronAPI.athenaDeleteTask(taskId);
@@ -159,27 +172,71 @@ export default function AthenaWorkspace({ isFullPage = false, onClose }) {
     }
   };
 
+  // Stops an in-flight mission. The backend has always supported this
+  // (athena:cancelTask / POST .../cancel) — nothing in this workspace ever
+  // called it, so a mission could only be waited out or deleted (and
+  // deleting one mid-flight used to silently un-delete itself the next time
+  // the mission saved its own progress — fixed server-side in executeTask).
+  const handleCancelTask = async (taskId, e) => {
+    e?.stopPropagation();
+    setIsCancelling(true);
+    try {
+      if (window.electronAPI?.athenaCancelTask) {
+        await window.electronAPI.athenaCancelTask(taskId);
+      } else {
+        await apiFetch(`/api/athena/tasks/${taskId}/cancel`, { method: 'POST' });
+      }
+      await loadTasks();
+    } catch (err) {
+      console.error('Failed to cancel Athena mission:', err);
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const handleRetryTask = async (task) => {
     if (!task) return;
     setIsLoading(true);
     try {
-      const payload = {
-        query: task.query,
-        depth: task.depth || 'standard',
-        focusAreas: task.focusAreas || [],
-        requestedBy: 'athena_retry'
-      };
       let created = null;
-      if (window.electronAPI?.athenaCreateTask) {
-        created = await window.electronAPI.athenaCreateTask(payload);
-      } else {
-        const res = await apiFetch('/api/athena/tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (res.ok) created = await res.json();
+
+      // Resume from the last checkpoint when the engine flagged this task as
+      // resumable (it already gathered sources before failing) — skips
+      // redoing the search step. Previously nothing called this at all, so
+      // every retry redid the full search from scratch even when it didn't
+      // need to.
+      if (task.canResume) {
+        let result = null;
+        if (window.electronAPI?.athenaResumeTask) {
+          result = await window.electronAPI.athenaResumeTask(task.id);
+        } else {
+          const res = await apiFetch(`/api/athena/tasks/${task.id}/resume`, { method: 'POST' });
+          if (res.ok) result = await res.json();
+        }
+        if (result?.success) created = result.task;
       }
+
+      // Either not resumable, or the resume call itself failed — fall back
+      // to a full restart as a brand-new task, same as before this fix.
+      if (!created) {
+        const payload = {
+          query: task.query,
+          depth: task.depth || 'standard',
+          focusAreas: task.focusAreas || [],
+          requestedBy: 'athena_retry'
+        };
+        if (window.electronAPI?.athenaCreateTask) {
+          created = await window.electronAPI.athenaCreateTask(payload);
+        } else {
+          const res = await apiFetch('/api/athena/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (res.ok) created = await res.json();
+        }
+      }
+
       if (created) {
         await loadTasks();
         setSelectedTaskId(created.id);
@@ -546,6 +603,7 @@ export default function AthenaWorkspace({ isFullPage = false, onClose }) {
                         onClick={(e) => handleDeleteTask(t.id, e)}
                         style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '2px' }}
                         title="Dismiss dossier"
+                        aria-label={`Dismiss dossier: ${t.query}`}
                       >
                         <Trash2 size={13} />
                       </button>
@@ -554,7 +612,9 @@ export default function AthenaWorkspace({ isFullPage = false, onClose }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
                       <span
                         onClick={(e) => { e.stopPropagation(); setStatusFilter(t.status); }}
-                        title={`Filter by ${t.status}`}
+                        title={`Filter the mission list to only "${t.status}" missions`}
+                        aria-label={`Filter the mission list to only ${t.status} missions`}
+                        role="button"
                         style={{
                           fontSize: '0.68rem',
                           fontWeight: 700,
@@ -658,8 +718,14 @@ export default function AthenaWorkspace({ isFullPage = false, onClose }) {
                 )}
               </div>
 
-              {/* In-Flight Progress Card */}
-              {(selectedTask.status || '').toLowerCase() !== 'completed' && (selectedTask.status || '').toLowerCase() !== 'failed' && (
+              {/* In-Flight Progress Card — excludes 'cancelled' as well as
+                  'completed'/'failed': without that, a cancelled task (which
+                  has no reportMarkdown) fell through to showing this AND the
+                  "Research Mission Interrupted" panel below at the same
+                  time, a stuck progress bar sitting above its own failure
+                  message. Unreachable before this fix (nothing could cancel
+                  a task), so it never actually happened until now. */}
+              {(selectedTask.status || '').toLowerCase() !== 'completed' && (selectedTask.status || '').toLowerCase() !== 'failed' && (selectedTask.status || '').toLowerCase() !== 'cancelled' && (
                 <div style={{
                   background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(99, 102, 241, 0.08))',
                   border: '1px solid rgba(56, 189, 248, 0.25)',
@@ -685,6 +751,28 @@ export default function AthenaWorkspace({ isFullPage = false, onClose }) {
                       style={{ height: '100%', background: 'linear-gradient(90deg, #38bdf8, #6366f1)', borderRadius: '3px' }}
                     />
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => handleCancelTask(selectedTask.id, e)}
+                    disabled={isCancelling}
+                    aria-label="Cancel this research mission"
+                    style={{
+                      alignSelf: 'flex-end',
+                      marginTop: '2px',
+                      padding: '5px 12px',
+                      borderRadius: '7px',
+                      border: '1px solid rgba(239, 68, 68, 0.35)',
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      color: '#fca5a5',
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      cursor: isCancelling ? 'not-allowed' : 'pointer',
+                      opacity: isCancelling ? 0.6 : 1
+                    }}
+                  >
+                    {isCancelling ? 'Cancelling…' : 'Cancel Mission'}
+                  </button>
                 </div>
               )}
 
@@ -803,7 +891,7 @@ export default function AthenaWorkspace({ isFullPage = false, onClose }) {
                       title: '🌐 NextTrace BGP & IXP Peering',
                       desc: 'Audit regional ISP transit, Six IXP interchange, and Cloudflare Anycast edge paths',
                       query: 'BGP Peering, Seattle SIX IXP exchange, and Anycast routing topology audit',
-                      depth: 'deep'
+                      depth: 'deep_dive'
                     },
                     {
                       title: '🧠 Local LLM Inference & VRAM Optimization',
@@ -815,7 +903,7 @@ export default function AthenaWorkspace({ isFullPage = false, onClose }) {
                       title: '⚡ Home Assistant Automation Sentinel',
                       desc: 'Analyze perimeter sensor rules, Aqara U400 door state integrity, and Zigbee mesh stability',
                       query: 'Home Assistant perimeter security architecture, smart lock failsafes, and IoT reliability',
-                      depth: 'deep'
+                      depth: 'deep_dive'
                     }
                   ].map((preset, idx) => (
                     <motion.div
@@ -849,6 +937,57 @@ export default function AthenaWorkspace({ isFullPage = false, onClose }) {
               </div>
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Themed delete confirmation — the in-app replacement for the native
+  // confirm() dialog. Rendered as its own top-layer overlay so it works
+  // identically whether AthenaWorkspace is showing full-page or as its own
+  // modal (the pending-delete task's title is looked up fresh here rather
+  // than captured at click time, since the task list can refresh underneath
+  // while this is open).
+  const pendingDeleteTask = pendingDeleteId ? tasks.find(t => t.id === pendingDeleteId) : null;
+  const deleteConfirmOverlay = pendingDeleteId && (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 10001, padding: '1.5rem'
+    }}>
+      <div style={{
+        background: '#0d1220', border: '1px solid rgba(239, 68, 68, 0.35)',
+        borderRadius: '16px', padding: '1.5rem', maxWidth: '420px', width: '100%',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+        display: 'flex', flexDirection: 'column', gap: '1rem'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+          <AlertCircle size={22} color="#f87171" style={{ flexShrink: 0, marginTop: '1px' }} />
+          <div>
+            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>Dismiss this research dossier?</div>
+            {pendingDeleteTask?.query && (
+              <div style={{ fontSize: '0.82rem', color: '#94a3b8', marginTop: '4px', lineHeight: 1.4 }}>
+                "{pendingDeleteTask.query}" will be permanently removed. This can't be undone.
+              </div>
+            )}
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={() => setPendingDeleteId(null)}
+            style={{ padding: '7px 16px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.1)', background: 'transparent', color: '#94a3b8', fontSize: '0.85rem', cursor: 'pointer' }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={confirmDeleteTask}
+            style={{ padding: '7px 16px', borderRadius: '8px', border: 'none', background: '#ef4444', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}
+          >
+            Dismiss Dossier
+          </button>
         </div>
       </div>
     </div>
@@ -899,6 +1038,7 @@ export default function AthenaWorkspace({ isFullPage = false, onClose }) {
             {workspaceBody}
           </div>
         </div>
+        {deleteConfirmOverlay}
       </div>
     );
   }
@@ -943,6 +1083,7 @@ export default function AthenaWorkspace({ isFullPage = false, onClose }) {
           {workspaceBody}
         </div>
       </div>
+      {deleteConfirmOverlay}
     </div>
   );
 }

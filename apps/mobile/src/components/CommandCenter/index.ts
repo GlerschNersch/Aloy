@@ -7,3 +7,5 @@ export { MediaBentoTile } from './MediaBentoTile';
 export { MediaCastModal } from './MediaCastModal';
 export { MediaStackModal } from './MediaStackModal';
 export { RoomObserverBentoTile } from './RoomObserverBentoTile';
+export { FederationBentoTile } from './FederationBentoTile';
+export { FederationModal } from './FederationModal';

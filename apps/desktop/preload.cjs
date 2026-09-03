@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   isElectron: true,
+  getBuildInfo: () => ipcRenderer.invoke('app:getBuildInfo'),
   selectFolder: () => ipcRenderer.invoke('dialog:selectFolder'),
   createObsidianNote: (vaultDir, filename, content) => ipcRenderer.invoke('obsidian:createNote', { vaultDir, filename, content }),
   scanFolder: (folderPath) => ipcRenderer.invoke('fs:scanFolder', folderPath),
@@ -79,6 +80,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   athenaCreateTask: (taskData) => ipcRenderer.invoke('athena:createTask', taskData),
   athenaDeleteTask: (taskId) => ipcRenderer.invoke('athena:deleteTask', taskId),
   athenaCancelTask: (taskId) => ipcRenderer.invoke('athena:cancelTask', taskId),
+  athenaResumeTask: (taskId) => ipcRenderer.invoke('athena:resumeTask', taskId),
 
   // Apollo Document Intelligence IPC
   apolloListTasks: () => ipcRenderer.invoke('apollo:listTasks'),

@@ -15,8 +15,8 @@ const { logAuditEvent } = require('./auditLogger.cjs');
 
 class HassTelemetryBridge {
   constructor(options = {}) {
-    this.haUrl = options.haUrl || process.env.HOME_ASSISTANT_URL || 'http://localhost:8123';
-    this.haToken = options.haToken || process.env.HOME_ASSISTANT_TOKEN;
+    this.haUrl = options.haUrl || process.env.HA_URL || process.env.HOME_ASSISTANT_URL || 'http://localhost:8123';
+    this.haToken = options.haToken || process.env.HOME_ASSISTANT_TOKEN || process.env.HA_TOKEN || process.env.VITE_HA_TOKEN;
     this.cachedTelemetry = null;
     this.lastSampleTime = 0;
   }
@@ -115,11 +115,13 @@ class HassTelemetryBridge {
     // same rule and why it matters (HA writes these into long-term statistics).
     if (state === null || state === undefined) return false;
     try {
-      const { httpFetch, TIMEOUTS } = require('./http.cjs');
+      const { httpFetch, TIMEOUTS, getInsecureLanDispatcher } = require('./http.cjs');
       const res = await httpFetch(`${this.haUrl}/api/states/${entityId}`, {
         timeoutMs: TIMEOUTS.API,
         method: 'POST',
         headers: { Authorization: `Bearer ${this.haToken}`, 'Content-Type': 'application/json' },
+        // HA on a LAN typically runs a self-signed cert — see getInsecureLanDispatcher.
+        ...(this.haUrl.startsWith('https:') ? { dispatcher: getInsecureLanDispatcher() } : {}),
         body: JSON.stringify({ state: String(state), attributes })
       });
       return res.ok;

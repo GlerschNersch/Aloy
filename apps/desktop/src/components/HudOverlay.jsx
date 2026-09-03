@@ -6,7 +6,7 @@ import {
   Layers, Lightbulb, Calendar, BookOpen, Send, X, RefreshCw, Copy, Check, Pin, PinOff, ChevronRight, ChevronDown, Watch
 } from 'lucide-react';
 import { renderMarkdown } from '../services/markdown';
-import { apiFetch } from '../services/aloyApi.js';
+import { apiFetch, apiJson } from '../services/aloyApi.js';
 
 const QUICK_CHIPS = [
   { label: '/briefing', icon: Sun, color: '#38bdf8', prompt: "Good morning! Please give me my Walk-Up Morning Briefing with my watch sleep score & recovery, today's calendar schedule, and home status." },
@@ -29,6 +29,7 @@ export default function HudOverlay() {
   });
 
   const [metrics, setMetrics] = useState({ cpu: 28, mem: 62, latency: 12, status: 'STABLE' });
+  const [buildInfo, setBuildInfo] = useState(null);
   const [isListening, setIsListening] = useState(false);
   const [messages, setMessages] = useState([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -72,6 +73,24 @@ export default function HudOverlay() {
     document.body.classList.add('hud-mode');
     const root = document.getElementById('root');
     if (root) root.classList.add('hud-mode');
+  }, []);
+
+  // Fetch build identity (git sha/branch, build timestamp) once, for the
+  // Sentinel Pill tooltip — lets us confirm which build is actually running
+  // without cracking open the asar.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const info = window.electronAPI?.getBuildInfo
+          ? await window.electronAPI.getBuildInfo()
+          : await apiJson('/api/build-info');
+        if (!cancelled) setBuildInfo(info);
+      } catch {
+        // Non-critical — tooltip just falls back to version-only.
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // Poll hardware & sentinel telemetry
@@ -437,8 +456,11 @@ export default function HudOverlay() {
               <span>{metrics.latency}ms</span>
             </div>
 
-            {/* Sentinel Pill */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#4ade80' }}>
+            {/* Sentinel Pill — hover for exact build identity (git sha/branch, build time) */}
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#4ade80', cursor: buildInfo ? 'help' : 'default' }}
+              title={buildInfo ? `Aloy v${buildInfo.version} · ${buildInfo.gitSha}${buildInfo.dirty ? ' (dirty)' : ''} on ${buildInfo.gitBranch}${buildInfo.builtAt ? `\nBuilt ${new Date(buildInfo.builtAt).toLocaleString()}` : ''}` : undefined}
+            >
               <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 5px #4ade80' }} />
               <span style={{ fontWeight: 700 }}>{metrics.status}</span>
             </div>

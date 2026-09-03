@@ -27,6 +27,22 @@ if (!isRenderer && !HA_NODE_TOKEN) {
   console.warn('[homeassistant] HA_TOKEN is not set in the server environment; Home Assistant calls will fail.');
 }
 
+// Home Assistant on a LAN commonly runs behind a self-signed cert — there's
+// no public CA to validate against. Getting an undici Agent for that requires
+// `undici`, a Node package — this file is also Vite-bundled for the renderer,
+// so it cannot import that package itself (dynamic `import('undici')` builds
+// fine but then fails at runtime inside the packaged asar: Electron's asar
+// patches cover the CJS `require()` loader, not Node's ESM `import()`
+// package resolution, so it 404s with ERR_MODULE_NOT_FOUND despite `undici`
+// being a real, present dependency). Instead the backend wires this in once
+// at startup via `_setBackendDispatcherFactory`, using its own `require()`
+// (server/http.cjs's getInsecureLanDispatcher), which *is* asar-aware.
+let backendDispatcherFactory = null;
+/** Backend-only injection point — never called from the renderer. */
+export function _setBackendDispatcherFactory(fn) {
+  backendDispatcherFactory = fn;
+}
+
 async function haFetch(endpoint, options = {}) {
   if (isRenderer) {
     // Renderer path: no HA credential here. apiFetch adds the Aloy bearer
@@ -41,6 +57,10 @@ async function haFetch(endpoint, options = {}) {
   // Backend path: talk to Home Assistant directly with the server's own token.
   return await fetchWithTimeout(`${HA_DIRECT_URL}${endpoint}`, {
     ...options,
+    // HA on a LAN typically runs a self-signed cert — see backendDispatcherFactory above.
+    ...(HA_DIRECT_URL.startsWith('https:') && backendDispatcherFactory
+      ? { dispatcher: backendDispatcherFactory() }
+      : {}),
     headers: {
       'Authorization': `Bearer ${HA_NODE_TOKEN}`,
       'Content-Type': 'application/json',

@@ -300,6 +300,14 @@ class AthenaEngine {
         t.status = RESEARCH_STATUS.FAILED;
         t.statusMessage = 'Recovered: task was orphaned in-flight (server restart or upstream hang) and has been marked failed.';
         t.completedAt = new Date().toISOString();
+        // Mirrors the same check executeTask's own catch block uses on a
+        // real failure — an orphan that got past the search step still has
+        // its checkpoint and gathered sources sitting right there, so a
+        // retry should be able to resume instead of redoing the search.
+        // Previously this path never set canResume at all, so every
+        // orphan-recovered task retried from scratch regardless of how far
+        // it had actually gotten.
+        t.canResume = Boolean(t.sources && t.sources.length > 0);
         recovered++;
       }
       if (recovered > 0) {
@@ -443,12 +451,33 @@ class AthenaEngine {
     return task;
   }
 
-  async executeTask(taskId) {
-    let tasks = this.loadTasks();
-    const taskIndex = tasks.findIndex(t => t.id === taskId);
-    if (taskIndex === -1) return;
+  // Re-loads the tasks file fresh and applies `mutate` to THIS task's
+  // current record, then saves that fresh array — never a snapshot taken
+  // earlier in a long-running executeTask call. Returns the updated task, or
+  // null if it was deleted or cancelled out from under this run (the caller
+  // must stop rather than keep going and overwrite that with a stale copy).
+  //
+  // executeTask used to hold one tasks-array snapshot for its whole
+  // multi-step duration (search → checkpoint → synthesize → complete) and
+  // write that same snapshot back at every progress update. A delete or
+  // cancel that landed mid-run wrote correctly to disk in that moment, but
+  // the next progress save from the still-running task silently overwrote
+  // it right back — the dossier just reappeared on the next poll as if
+  // nothing had happened. Routing every save through here closes that.
+  persistTaskUpdate(taskId, mutate) {
+    const freshTasks = this.loadTasks();
+    const idx = freshTasks.findIndex(t => t.id === taskId);
+    if (idx === -1) return null; // deleted mid-run
+    const freshTask = freshTasks[idx];
+    if (freshTask.status === RESEARCH_STATUS.CANCELLED) return null; // cancelled mid-run
+    mutate(freshTask);
+    this.saveTasks(freshTasks);
+    return freshTask;
+  }
 
-    const task = tasks[taskIndex];
+  async executeTask(taskId) {
+    let task = this.getTask(taskId);
+    if (!task) return;
     if (task.status === RESEARCH_STATUS.CANCELLED) return;
 
     try {
@@ -459,10 +488,12 @@ class AthenaEngine {
 
       if (!hasValidCheckpoint) {
         // Step 1: Gathering baseline sources
-        task.status = RESEARCH_STATUS.RESEARCHING;
-        task.progress = 25;
-        task.statusMessage = 'Searching web indices and relevant documentation...';
-        this.saveTasks(tasks);
+        task = this.persistTaskUpdate(taskId, (t) => {
+          t.status = RESEARCH_STATUS.RESEARCHING;
+          t.progress = 25;
+          t.statusMessage = 'Searching web indices and relevant documentation...';
+        });
+        if (!task) return;
 
         // Defence in depth: wrap search in deadline
         sources = await withDeadline(
@@ -470,24 +501,31 @@ class AthenaEngine {
           SEARCH_DEADLINE_MS,
           []
         );
-        task.sources = sources;
-        task.checkpoint = {
-          stage: 'sources_gathered',
-          sourcesCount: sources.length,
-          savedAt: new Date().toISOString()
-        };
-        task.progress = 60;
-        task.statusMessage = `Discovered ${sources.length} relevant sources. Synthesizing intelligence dossier...`;
-        this.saveTasks(tasks);
+
+        task = this.persistTaskUpdate(taskId, (t) => {
+          t.sources = sources;
+          t.checkpoint = {
+            stage: 'sources_gathered',
+            sourcesCount: sources.length,
+            savedAt: new Date().toISOString()
+          };
+          t.progress = 60;
+          t.statusMessage = `Discovered ${sources.length} relevant sources. Synthesizing intelligence dossier...`;
+        });
+        if (!task) return;
       } else {
-        task.status = RESEARCH_STATUS.SYNTHESIZING;
-        task.progress = 60;
-        task.statusMessage = `Resuming from checkpoint with ${sources.length} cached sources. Synthesizing intelligence dossier...`;
-        this.saveTasks(tasks);
+        task = this.persistTaskUpdate(taskId, (t) => {
+          t.status = RESEARCH_STATUS.SYNTHESIZING;
+          t.progress = 60;
+          t.statusMessage = `Resuming from checkpoint with ${sources.length} cached sources. Synthesizing intelligence dossier...`;
+        });
+        if (!task) return;
       }
 
       // Step 2: AI Multi-source Synthesis
-      task.status = RESEARCH_STATUS.SYNTHESIZING;
+      task = this.persistTaskUpdate(taskId, (t) => { t.status = RESEARCH_STATUS.SYNTHESIZING; });
+      if (!task) return;
+
       const synthesis = await synthesizeReportWithAI({
         query: task.query,
         depth: task.depth,
@@ -496,17 +534,16 @@ class AthenaEngine {
       });
 
       // Step 3: Complete
-      task.status = RESEARCH_STATUS.COMPLETED;
-      task.progress = 100;
-      task.statusMessage = 'Research dossier complete and verified.';
-      task.reportMarkdown = synthesis.markdown;
-      task.provider = synthesis.provider;
-      task.completedAt = new Date().toISOString();
-      task.checkpoint = {
-        stage: 'completed',
-        completedAt: task.completedAt
-      };
-      this.saveTasks(tasks);
+      task = this.persistTaskUpdate(taskId, (t) => {
+        t.status = RESEARCH_STATUS.COMPLETED;
+        t.progress = 100;
+        t.statusMessage = 'Research dossier complete and verified.';
+        t.reportMarkdown = synthesis.markdown;
+        t.provider = synthesis.provider;
+        t.completedAt = new Date().toISOString();
+        t.checkpoint = { stage: 'completed', completedAt: t.completedAt };
+      });
+      if (!task) return; // deleted/cancelled mid-run — don't log completion for it
 
       logAuditEvent({
         action: 'athena_research_completed',
@@ -516,17 +553,19 @@ class AthenaEngine {
 
     } catch (err) {
       console.error('[Athena Engine Error]', err);
-      task.status = RESEARCH_STATUS.FAILED;
-      task.statusMessage = `Research failed: ${err.message}`;
-      task.completedAt = new Date().toISOString();
-      task.canResume = Boolean(task.sources && task.sources.length > 0);
-      this.saveTasks(tasks);
-
-      logAuditEvent({
-        action: 'athena_research_failed',
-        source: 'athena',
-        details: { taskId, error: err.message }
+      const failed = this.persistTaskUpdate(taskId, (t) => {
+        t.status = RESEARCH_STATUS.FAILED;
+        t.statusMessage = `Research failed: ${err.message}`;
+        t.completedAt = new Date().toISOString();
+        t.canResume = Boolean(t.sources && t.sources.length > 0);
       });
+      if (failed) {
+        logAuditEvent({
+          action: 'athena_research_failed',
+          source: 'athena',
+          details: { taskId, error: err.message }
+        });
+      }
     }
   }
 

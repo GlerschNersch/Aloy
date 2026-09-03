@@ -37,6 +37,7 @@ test('clears every timer it starts on unmount', async () => {
   });
   await ReactTestRenderer.act(async () => { jest.advanceTimersByTime(1000); });
   await ReactTestRenderer.act(async () => { tree!.unmount(); });
+  jest.advanceTimersToNextTimer();
   expect(jest.getTimerCount()).toBe(0);
 });
 

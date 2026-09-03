@@ -32,6 +32,8 @@ import {
   MediaCastModal,
   MediaStackModal,
   RoomObserverBentoTile,
+  FederationBentoTile,
+  FederationModal,
 } from './src/components/CommandCenter';
 import type { RoomObservation } from './src/components/CommandCenter/RoomObserverBentoTile';
 import {
@@ -316,6 +318,7 @@ export default function App() {
   const [jellyfinSessions, setJellyfinSessions] = useState<any[]>([]);
   const [mediaCastVisible, setMediaCastVisible] = useState(false);
   const [mediaStackVisible, setMediaStackVisible] = useState(false);
+  const [federationVisible, setFederationVisible] = useState(false);
   const refreshJellyfin = async (urlOverride?: string, tokenOverride?: string) => {
     try {
       const [statusRes, sessRes] = await Promise.all([
@@ -509,12 +512,43 @@ export default function App() {
     }
   };
 
-  const handleDeleteAthenaTask = async (taskId: string) => {
+  // Previously a single tap deleted a dossier immediately — no confirmation
+  // at all, unlike every other destructive action in this app. A mis-tap
+  // permanently destroyed research that may have taken real time and API
+  // cost to produce, with no recovery path (this is a hard delete).
+  const handleDeleteAthenaTask = (taskId: string, query?: string) => {
+    Alert.alert(
+      'Dismiss this research dossier?',
+      query ? `"${query}" will be permanently removed. This can't be undone.` : "This can't be undone.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Dismiss',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiRequest('DELETE', `/api/athena/tasks/${taskId}`);
+              refreshAthenaTasks();
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Could not delete dossier');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Stops an in-flight mission. The backend has always supported this
+  // (POST .../cancel) — nothing on mobile ever called it, so a mission
+  // could only be waited out or deleted (and deleting one mid-flight used
+  // to silently un-delete itself the next time the mission saved its own
+  // progress — fixed server-side in athena.cjs's executeTask).
+  const handleCancelAthenaTask = async (taskId: string) => {
     try {
-      await apiRequest('DELETE', `/api/athena/tasks/${taskId}`);
+      await apiRequest('POST', `/api/athena/tasks/${taskId}/cancel`);
       refreshAthenaTasks();
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Could not delete dossier');
+      Alert.alert('Error', err.message || 'Could not cancel mission');
     }
   };
 
@@ -888,15 +922,20 @@ export default function App() {
   // or from a bare literal, so the UI reported ONLINE with the server
   // unplugged. This records whether the last API call actually succeeded.
   const [serverReachable, setServerReachable] = useState(false);
+  const activeApiTimeoutsRef = useRef<Set<any>>(new Set());
 
   // The recorder was never stopped on unmount, so unmounting or backgrounding
   // mid-recording left the microphone live with the OS indicator lit.
   useEffect(() => () => {
     try {
-      audioRecorderRef.current?.stopRecorder?.();
-      audioRecorderRef.current?.removeRecordBackListener?.();
+      (audioRecorderRef as any)?.stopRecorder?.();
+      (audioRecorderRef as any)?.removeRecordBackListener?.();
     } catch { /* already stopped */ }
     try { Tts.stop(); } catch { /* engine may not be initialised */ }
+    for (const tid of activeApiTimeoutsRef.current) {
+      clearTimeout(tid);
+    }
+    activeApiTimeoutsRef.current.clear();
   }, []);
 
   // `externalSignal`: lets a caller cancel the request on demand (the chat
@@ -909,6 +948,7 @@ export default function App() {
     const tok = tokenOverride ?? authToken;
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+    if (timeoutId) activeApiTimeoutsRef.current.add(timeoutId);
     let signal = controller?.signal;
     if (externalSignal && controller) {
       signal = typeof (AbortSignal as any).any === 'function'
@@ -941,7 +981,10 @@ export default function App() {
       if (err instanceof TypeError || (err as any)?.name === 'AbortError') setServerReachable(false);
       throw err;
     } finally {
-      if (timeoutId) clearTimeout(timeoutId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        activeApiTimeoutsRef.current.delete(timeoutId);
+      }
     }
   };
 
@@ -2024,6 +2067,15 @@ export default function App() {
                           onOpenCreateTaskModal={() => setCreateTaskModalVisible(true)}
                           onOpenCreateAthenaModal={() => setCreateAthenaModalVisible(true)}
                         />
+
+                        {/* 🌐 Zero-Trust Federation & SPARC Quality Gates Bento Tile */}
+                        <FederationBentoTile
+                          serverUrl={serverUrl}
+                          peersCount={3}
+                          activeWorkflowsCount={2}
+                          topStrategy={{ name: 'SPARC-Guided Prompt', elo: 1395, winRate: 88.9 }}
+                          onOpenFederationModal={() => setFederationVisible(true)}
+                        />
                       </>
                     );
                   })()}
@@ -2716,6 +2768,7 @@ export default function App() {
                       const isExpanded = !!expandedAthenaDossiers[t.id];
                       const isDone = t.status === 'completed';
                       const isFail = t.status === 'failed';
+                      const isCancelled = t.status === 'cancelled';
                       const depthLabel = t.depth === 'deep_dive' ? '🧠 DEEP DIVE' : t.depth === 'quick' ? '⚡ QUICK BRIEF' : '🔍 STANDARD REPORT';
                       const depthColor = t.depth === 'deep_dive' ? '#c084fc' : t.depth === 'quick' ? '#38bdf8' : '#818cf8';
 
@@ -2760,8 +2813,15 @@ export default function App() {
                             </TouchableOpacity>
                           </View>
 
-                          {/* Progress HUD if in-flight */}
-                          {!isDone && !isFail && (
+                          {/* Progress HUD if in-flight — excludes 'cancelled' as
+                              well as done/failed: without that, a cancelled
+                              task (which never reaches completed/failed) fell
+                              through to showing this stuck progress bar
+                              forever, on top of whatever the status pill
+                              above already said. Unreachable before Cancel
+                              existed on mobile, so it never actually
+                              happened until now. */}
+                          {!isDone && !isFail && !isCancelled && (
                             <View style={{ marginTop: 10, padding: 10, borderRadius: 10, backgroundColor: 'rgba(56, 189, 248, 0.08)', borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.2)' }}>
                               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                                 <Text style={{ color: '#38bdf8', fontSize: 11, fontWeight: '700', flex: 1, marginRight: 6 }}>
@@ -2774,6 +2834,12 @@ export default function App() {
                               <View style={[styles.projectProgressTrack, { height: 6, borderRadius: 3 }]}>
                                 <View style={[styles.projectProgressFill, { width: `${t.progress}%`, backgroundColor: '#38bdf8', height: 6, borderRadius: 3 }]} />
                               </View>
+                              <TouchableOpacity
+                                onPress={() => handleCancelAthenaTask(t.id)}
+                                style={{ alignSelf: 'flex-end', marginTop: 8, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                              >
+                                <Text style={{ color: '#f87171', fontSize: 10.5, fontWeight: '700' }}>Cancel Mission</Text>
+                              </TouchableOpacity>
                             </View>
                           )}
 
@@ -2831,7 +2897,7 @@ export default function App() {
                           <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10, paddingTop: 6, borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.04)' }}>
                             <TouchableOpacity
                               style={[styles.hephActionBtn, { backgroundColor: 'rgba(239, 68, 68, 0.08)', borderColor: 'rgba(239, 68, 68, 0.3)', paddingHorizontal: 12, paddingVertical: 6 }]}
-                              onPress={() => handleDeleteAthenaTask(t.id)}
+                              onPress={() => handleDeleteAthenaTask(t.id, t.query)}
                             >
                               <Trash2 size={12} color="#f87171" />
                               <Text style={{ color: '#f87171', fontSize: 11, fontWeight: '700', marginLeft: 4 }}>Dismiss</Text>
@@ -4865,6 +4931,14 @@ export default function App() {
       <MediaStackModal
         visible={mediaStackVisible}
         onClose={() => setMediaStackVisible(false)}
+        serverUrl={serverUrl}
+        apiRequest={apiRequest}
+      />
+
+      {/* 🌐 Zero-Trust Agent Federation, SPARC Gates & Arena Leaderboard */}
+      <FederationModal
+        visible={federationVisible}
+        onClose={() => setFederationVisible(false)}
         serverUrl={serverUrl}
         apiRequest={apiRequest}
       />

@@ -8,12 +8,12 @@
  */
 
 const { globalHealthBridge } = require('./healthBridge.cjs');
-const { httpFetch, TIMEOUTS } = require('./http.cjs');
+const { httpFetch, TIMEOUTS, getInsecureLanDispatcher } = require('./http.cjs');
 const { logAuditEvent } = require('./auditLogger.cjs');
 
 class ZeppSyncEngine {
   constructor(options = {}) {
-    this.haUrl = options.haUrl || process.env.HOME_ASSISTANT_URL || process.env.VITE_HA_URL || 'http://localhost:8123';
+    this.haUrl = options.haUrl || process.env.HA_URL || process.env.HOME_ASSISTANT_URL || process.env.VITE_HA_URL || 'http://localhost:8123';
     this.haToken = options.haToken || process.env.HOME_ASSISTANT_TOKEN || process.env.VITE_HA_TOKEN;
     this.lastPublishedAt = null;
   }
@@ -42,6 +42,8 @@ class ZeppSyncEngine {
           Authorization: `Bearer ${this.haToken}`,
           'Content-Type': 'application/json'
         },
+        // HA on a LAN typically runs a self-signed cert — see getInsecureLanDispatcher.
+        ...(cleanBase.startsWith('https:') ? { dispatcher: getInsecureLanDispatcher() } : {}),
         body: JSON.stringify({
           state: String(state),
           attributes: {
