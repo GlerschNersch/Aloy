@@ -11,7 +11,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const STORE_DIR = path.join(require('os').homedir(), '.aloy-server');
+// Overridable so tests can exercise the real read/write/merge logic against
+// a throwaway directory instead of the user's actual ~/.aloy-server — this
+// module is plain functions over module-level constants, not a class, so an
+// env var is the lowest-friction injection point (same reasoning as the
+// AthenaEngine(testTasksFile) constructor override elsewhere in this repo).
+const STORE_DIR = process.env.ALOY_STORE_DIR || path.join(require('os').homedir(), '.aloy-server');
 const STORE_PATH = path.join(STORE_DIR, 'store.json');
 
 const DEFAULT_STORE = {
